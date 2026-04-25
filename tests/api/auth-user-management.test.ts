@@ -10,7 +10,7 @@ import {
   DELETE as userDelete,
   GET as userDetailGet,
 } from "../../src/app/api/users/[id]/route";
-import { db, nowIsoString, orm } from "../../src/db/sqlite";
+import { closePool, db, nowIsoString, orm } from "../../src/db/postgres";
 import { sessions, users } from "../../src/db/schema";
 import { hashPassword } from "../../src/app/api/utils/auth";
 
@@ -18,9 +18,8 @@ const EMPTY_CONTEXT = {
   params: Promise.resolve({}),
 };
 
-beforeAll(() => {
-  db.exec(`
-    PRAGMA foreign_keys = ON;
+beforeAll(async () => {
+  await db.query(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -42,12 +41,16 @@ beforeAll(() => {
   `);
 });
 
-beforeEach(() => {
-  orm.delete(sessions).run();
-  orm.delete(users).run();
+afterAll(async () => {
+  await closePool();
+});
+
+beforeEach(async () => {
+  await orm.delete(sessions).run();
+  await orm.delete(users).run();
 
   const now = nowIsoString();
-  orm
+  await orm
     .insert(users)
     .values([
       {
@@ -157,7 +160,7 @@ describe("Auth + User Management Integration", () => {
     const token = await loginAndGetToken("admin@kplayer.local", "Password123!");
     const createdUserId = randomUUID();
     const now = nowIsoString();
-    orm
+    await orm
       .insert(users)
       .values({
         id: createdUserId,

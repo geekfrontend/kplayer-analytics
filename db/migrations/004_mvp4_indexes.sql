@@ -1,5 +1,3 @@
-PRAGMA foreign_keys = ON;
-
 CREATE INDEX IF NOT EXISTS idx_season_clubs_season
   ON season_clubs(season_id);
 

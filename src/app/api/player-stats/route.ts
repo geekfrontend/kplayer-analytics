@@ -5,7 +5,7 @@ import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { nowIsoString, orm } from "@/db/sqlite";
+import { nowIsoString, orm } from "@/db/postgres";
 import {
   clubs,
   player_club_history,
@@ -70,38 +70,42 @@ function validateStatsDomain(goals: number, shots: number) {
   }
 }
 
-function validateMasterReferences(playerId: string, seasonId: string, clubId: string) {
-  const player = orm
+async function validateMasterReferences(
+  playerId: string,
+  seasonId: string,
+  clubId: string,
+) {
+  const player = (await orm
     .select({ id: players.id })
     .from(players)
     .where(eq(players.id, playerId))
     .limit(1)
-    .get() as { id: string } | undefined;
+    .get()) as { id: string } | undefined;
   if (!player) {
     throw ApiError.badRequest("Player tidak ditemukan");
   }
 
-  const season = orm
+  const season = (await orm
     .select({ id: seasons.id })
     .from(seasons)
     .where(eq(seasons.id, seasonId))
     .limit(1)
-    .get() as { id: string } | undefined;
+    .get()) as { id: string } | undefined;
   if (!season) {
     throw ApiError.badRequest("Season tidak ditemukan");
   }
 
-  const club = orm
+  const club = (await orm
     .select({ id: clubs.id })
     .from(clubs)
     .where(eq(clubs.id, clubId))
     .limit(1)
-    .get() as { id: string } | undefined;
+    .get()) as { id: string } | undefined;
   if (!club) {
     throw ApiError.badRequest("Club tidak ditemukan");
   }
 
-  const seasonClub = orm
+  const seasonClub = (await orm
     .select({ id: season_clubs.id })
     .from(season_clubs)
     .where(
@@ -111,7 +115,7 @@ function validateMasterReferences(playerId: string, seasonId: string, clubId: st
       ),
     )
     .limit(1)
-    .get() as { id: string } | undefined;
+    .get()) as { id: string } | undefined;
   if (!seasonClub) {
     throw ApiError.badRequest(
       "Club belum terdaftar pada season terkait di season-clubs",
@@ -119,8 +123,8 @@ function validateMasterReferences(playerId: string, seasonId: string, clubId: st
   }
 }
 
-function validateAssignment(playerId: string, seasonId: string, clubId: string) {
-  const assignment = orm
+async function validateAssignment(playerId: string, seasonId: string, clubId: string) {
+  const assignment = (await orm
     .select({ id: player_club_history.id })
     .from(player_club_history)
     .where(
@@ -131,7 +135,7 @@ function validateAssignment(playerId: string, seasonId: string, clubId: string) 
       ),
     )
     .limit(1)
-    .get() as { id: string } | undefined;
+    .get()) as { id: string } | undefined;
 
   if (!assignment) {
     throw ApiError.badRequest(
@@ -141,7 +145,7 @@ function validateAssignment(playerId: string, seasonId: string, clubId: string) 
 }
 
 export const GET = RouteHandler(async (req) => {
-  requireAuth(req);
+  await requireAuth(req);
 
   const parsedQuery = querySchema.safeParse({
     player_id: req.nextUrl.searchParams.get("player_id") ?? undefined,
@@ -172,7 +176,7 @@ export const GET = RouteHandler(async (req) => {
   const whereClause =
     whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
-  const items = orm
+  const items = await orm
     .select({
       id: player_stats.id,
       player_id: player_stats.player_id,
@@ -200,11 +204,11 @@ export const GET = RouteHandler(async (req) => {
     .offset(offset)
     .all() as PlayerStatsRow[];
 
-  const countResult = orm
+  const countResult = (await orm
     .select({ total: count() })
     .from(player_stats)
     .where(whereClause)
-    .get();
+    .get()) as { total: number } | undefined;
 
   return ApiResponse.ok("Player stats fetched", {
     items,
@@ -218,7 +222,7 @@ export const GET = RouteHandler(async (req) => {
 });
 
 export const POST = RouteHandler(async (req) => {
-  const user = requireAuth(req);
+  const user = await requireAuth(req);
   requireRole(user, ["admin"]);
 
   const parsed = createSchema.safeParse(await req.json());
@@ -228,14 +232,18 @@ export const POST = RouteHandler(async (req) => {
 
   const payload = parsed.data;
   validateStatsDomain(payload.goals, payload.shots);
-  validateMasterReferences(payload.player_id, payload.season_id, payload.club_id);
-  validateAssignment(payload.player_id, payload.season_id, payload.club_id);
+  await validateMasterReferences(
+    payload.player_id,
+    payload.season_id,
+    payload.club_id,
+  );
+  await validateAssignment(payload.player_id, payload.season_id, payload.club_id);
 
   const id = randomUUID();
   const now = nowIsoString();
 
   try {
-    orm
+    await orm
       .insert(player_stats)
       .values({
         id,
@@ -259,7 +267,7 @@ export const POST = RouteHandler(async (req) => {
     throw error;
   }
 
-  const item = orm
+  const item = await orm
     .select({
       id: player_stats.id,
       player_id: player_stats.player_id,

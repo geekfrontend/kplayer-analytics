@@ -4,7 +4,7 @@ import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { orm } from "@/db/sqlite";
+import { orm } from "@/db/postgres";
 import { players } from "@/db/schema";
 
 const querySchema = z.object({
@@ -14,7 +14,7 @@ const querySchema = z.object({
 });
 
 export const GET = RouteHandler(async (req) => {
-  requireAuth(req);
+  await requireAuth(req);
 
   const parsedQuery = querySchema.safeParse({
     q: req.nextUrl.searchParams.get("q") ?? undefined,
@@ -31,7 +31,7 @@ export const GET = RouteHandler(async (req) => {
   const whereConditions: SQL[] = [like(players.full_name, `%${q}%`)];
   const whereClause = and(...whereConditions);
 
-  const items = orm
+  const items = await orm
     .select({
       id: players.id,
       full_name: players.full_name,
@@ -48,11 +48,11 @@ export const GET = RouteHandler(async (req) => {
     .offset(offset)
     .all();
 
-  const countResult = orm
+  const countResult = (await orm
     .select({ total: count() })
     .from(players)
     .where(whereClause)
-    .get();
+    .get()) as { total: number } | undefined;
 
   return ApiResponse.ok("Player search fetched", {
     items,

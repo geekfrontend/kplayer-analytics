@@ -4,7 +4,7 @@ import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { nowIsoString, orm } from "@/db/sqlite";
+import { nowIsoString, orm } from "@/db/postgres";
 import { clubs } from "@/db/schema";
 
 const paramsSchema = z.object({
@@ -37,10 +37,10 @@ async function parseClubId(params: Promise<Record<string, string>>) {
 }
 
 export const GET = RouteHandler(async (req, ctx) => {
-  requireAuth(req);
+  await requireAuth(req);
   const clubId = await parseClubId(ctx.params);
 
-  const club = orm
+  const club = await orm
     .select({
       id: clubs.id,
       name: clubs.name,
@@ -61,7 +61,7 @@ export const GET = RouteHandler(async (req, ctx) => {
 });
 
 export const PATCH = RouteHandler(async (req, ctx) => {
-  const user = requireAuth(req);
+  const user = await requireAuth(req);
   requireRole(user, ["admin"]);
   const clubId = await parseClubId(ctx.params);
 
@@ -70,7 +70,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     throw ApiError.badRequest("Input club tidak valid", parsed.error.issues);
   }
 
-  const existing = orm
+  const existing = await orm
     .select({ id: clubs.id })
     .from(clubs)
     .where(eq(clubs.id, clubId))
@@ -96,7 +96,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
   }
 
   try {
-    orm.update(clubs).set(updates).where(eq(clubs.id, clubId)).run();
+    await orm.update(clubs).set(updates).where(eq(clubs.id, clubId)).run();
   } catch (error) {
     if (getSqliteErrorCode(error) === "SQLITE_CONSTRAINT_UNIQUE") {
       throw ApiError.conflict("Club sudah terdaftar");
@@ -104,7 +104,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     throw error;
   }
 
-  const club = orm
+  const club = await orm
     .select({
       id: clubs.id,
       name: clubs.name,
@@ -121,11 +121,11 @@ export const PATCH = RouteHandler(async (req, ctx) => {
 });
 
 export const DELETE = RouteHandler(async (req, ctx) => {
-  const user = requireAuth(req);
+  const user = await requireAuth(req);
   requireRole(user, ["admin"]);
   const clubId = await parseClubId(ctx.params);
 
-  const result = orm.delete(clubs).where(eq(clubs.id, clubId)).run();
+  const result = await orm.delete(clubs).where(eq(clubs.id, clubId)).run();
   if (result.changes < 1) {
     throw ApiError.notFound("Club tidak ditemukan");
   }

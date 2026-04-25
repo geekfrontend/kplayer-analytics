@@ -22,7 +22,7 @@ export const POST = RouteHandler(async (req) => {
     throw ApiError.badRequest("Input login tidak valid", parsed.error.flatten());
   }
 
-  const user = findUserByEmail(parsed.data.email);
+  const user = await findUserByEmail(parsed.data.email);
   if (!user || !verifyPassword(parsed.data.password, user.password_hash)) {
     throw ApiError.unauthorized("Email atau password salah");
   }
@@ -31,7 +31,7 @@ export const POST = RouteHandler(async (req) => {
   const expiresIn = getAccessTokenExpiresInSeconds();
   const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
-  createSession(user.id, accessToken, expiresAt);
+  await createSession(user.id, accessToken, expiresAt);
 
   return ApiResponse.ok("Login success", {
     access_token: accessToken,
@@ -45,4 +45,3 @@ export const POST = RouteHandler(async (req) => {
     },
   });
 });
-

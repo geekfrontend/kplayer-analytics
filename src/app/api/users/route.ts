@@ -10,7 +10,7 @@ import {
   UserRole,
 } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { orm, nowIsoString } from "@/db/sqlite";
+import { orm, nowIsoString } from "@/db/postgres";
 import { users } from "@/db/schema";
 
 const querySchema = z.object({
@@ -51,7 +51,7 @@ function getSqliteErrorCode(error: unknown) {
 }
 
 export const GET = RouteHandler(async (req) => {
-  const currentUser = requireAuth(req);
+  const currentUser = await requireAuth(req);
   requireRole(currentUser, ["admin"]);
 
   const parsedQuery = querySchema.safeParse({
@@ -80,7 +80,7 @@ export const GET = RouteHandler(async (req) => {
 
   const whereClause = and(...whereConditions);
 
-  const items = orm
+  const items = await orm
     .select({
       id: users.id,
       name: users.name,
@@ -96,11 +96,11 @@ export const GET = RouteHandler(async (req) => {
     .offset(offset)
     .all() as ListUserRow[];
 
-  const countRow = orm
+  const countRow = (await orm
     .select({ total: count() })
     .from(users)
     .where(whereClause)
-    .get();
+    .get()) as { total: number } | undefined;
 
   return ApiResponse.ok("User list fetched", {
     items,
@@ -114,7 +114,7 @@ export const GET = RouteHandler(async (req) => {
 });
 
 export const POST = RouteHandler(async (req) => {
-  const currentUser = requireAuth(req);
+  const currentUser = await requireAuth(req);
   requireRole(currentUser, ["admin"]);
 
   const payload = await req.json();

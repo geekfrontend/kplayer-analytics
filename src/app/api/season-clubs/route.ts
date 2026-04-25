@@ -5,7 +5,7 @@ import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { nowIsoString, orm } from "@/db/sqlite";
+import { nowIsoString, orm } from "@/db/postgres";
 import { clubs, season_clubs, seasons } from "@/db/schema";
 
 const querySchema = z.object({
@@ -37,24 +37,24 @@ function getSqliteErrorCode(error: unknown) {
   return typeof candidate.code === "string" ? candidate.code : null;
 }
 
-function validateForeignKeys(seasonId: string, clubId: string) {
-  const season = orm
+async function validateForeignKeys(seasonId: string, clubId: string) {
+  const season = (await orm
     .select({ id: seasons.id })
     .from(seasons)
     .where(eq(seasons.id, seasonId))
     .limit(1)
-    .get() as { id: string } | undefined;
+    .get()) as { id: string } | undefined;
 
   if (!season) {
     throw ApiError.badRequest("Season tidak ditemukan");
   }
 
-  const club = orm
+  const club = (await orm
     .select({ id: clubs.id })
     .from(clubs)
     .where(eq(clubs.id, clubId))
     .limit(1)
-    .get() as { id: string } | undefined;
+    .get()) as { id: string } | undefined;
 
   if (!club) {
     throw ApiError.badRequest("Club tidak ditemukan");
@@ -62,7 +62,7 @@ function validateForeignKeys(seasonId: string, clubId: string) {
 }
 
 export const GET = RouteHandler(async (req) => {
-  requireAuth(req);
+  await requireAuth(req);
 
   const parsedQuery = querySchema.safeParse({
     season_id: req.nextUrl.searchParams.get("season_id") ?? undefined,
@@ -90,7 +90,7 @@ export const GET = RouteHandler(async (req) => {
   const whereClause =
     whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
-  const items = orm
+  const items = await orm
     .select({
       id: season_clubs.id,
       season_id: season_clubs.season_id,
@@ -108,11 +108,11 @@ export const GET = RouteHandler(async (req) => {
     .offset(offset)
     .all() as SeasonClubRow[];
 
-  const countResult = orm
+  const countResult = (await orm
     .select({ total: count() })
     .from(season_clubs)
     .where(whereClause)
-    .get();
+    .get()) as { total: number } | undefined;
 
   return ApiResponse.ok("Season club list fetched", {
     items,
@@ -126,7 +126,7 @@ export const GET = RouteHandler(async (req) => {
 });
 
 export const POST = RouteHandler(async (req) => {
-  const user = requireAuth(req);
+  const user = await requireAuth(req);
   requireRole(user, ["admin"]);
 
   const parsed = createSeasonClubSchema.safeParse(await req.json());
@@ -137,13 +137,13 @@ export const POST = RouteHandler(async (req) => {
     );
   }
 
-  validateForeignKeys(parsed.data.season_id, parsed.data.club_id);
+  await validateForeignKeys(parsed.data.season_id, parsed.data.club_id);
 
   const id = randomUUID();
   const createdAt = nowIsoString();
 
   try {
-    orm
+    await orm
       .insert(season_clubs)
       .values({
         id,
@@ -159,7 +159,7 @@ export const POST = RouteHandler(async (req) => {
     throw error;
   }
 
-  const item = orm
+  const item = await orm
     .select({
       id: season_clubs.id,
       season_id: season_clubs.season_id,

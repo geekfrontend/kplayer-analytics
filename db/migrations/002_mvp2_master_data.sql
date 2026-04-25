@@ -1,6 +1,4 @@
-PRAGMA foreign_keys = ON;
-
-ALTER TABLE users ADD COLUMN deleted_at TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TEXT;
 
 CREATE TABLE IF NOT EXISTS seasons (
   id TEXT PRIMARY KEY,
@@ -29,4 +27,3 @@ CREATE TABLE IF NOT EXISTS players (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
-

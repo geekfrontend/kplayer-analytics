@@ -5,7 +5,7 @@ import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { db, nowIsoString, orm } from "@/db/sqlite";
+import { nowIsoString, orm } from "@/db/postgres";
 import {
   clubs,
   player_club_history,
@@ -51,8 +51,8 @@ function validateStatsDomain(goals: number, shots: number) {
   }
 }
 
-function validateAssignment(playerId: string, seasonId: string, clubId: string) {
-  const assignment = orm
+async function validateAssignment(playerId: string, seasonId: string, clubId: string) {
+  const assignment = (await orm
     .select({ id: player_club_history.id })
     .from(player_club_history)
     .where(
@@ -63,7 +63,7 @@ function validateAssignment(playerId: string, seasonId: string, clubId: string) 
       ),
     )
     .limit(1)
-    .get() as { id: string } | undefined;
+    .get()) as { id: string } | undefined;
 
   if (!assignment) {
     throw ApiError.badRequest(
@@ -80,8 +80,8 @@ async function parseStatsId(params: Promise<Record<string, string>>) {
   return parsed.data.id;
 }
 
-function getStatsById(id: string) {
-  return orm
+async function getStatsById(id: string) {
+  return (await orm
     .select({
       id: player_stats.id,
       player_id: player_stats.player_id,
@@ -99,14 +99,14 @@ function getStatsById(id: string) {
     .from(player_stats)
     .where(eq(player_stats.id, id))
     .limit(1)
-    .get() as PlayerStatsRecord | undefined;
+    .get()) as PlayerStatsRecord | undefined;
 }
 
 export const GET = RouteHandler(async (req, ctx) => {
-  requireAuth(req);
+  await requireAuth(req);
 
   const statsId = await parseStatsId(ctx.params);
-  const item = orm
+  const item = await orm
     .select({
       id: player_stats.id,
       player_id: player_stats.player_id,
@@ -140,7 +140,7 @@ export const GET = RouteHandler(async (req, ctx) => {
 });
 
 export const PATCH = RouteHandler(async (req, ctx) => {
-  const user = requireAuth(req);
+  const user = await requireAuth(req);
   requireRole(user, ["admin"]);
 
   const statsId = await parseStatsId(ctx.params);
@@ -149,7 +149,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     throw ApiError.badRequest("Input update stats tidak valid", parsed.error.issues);
   }
 
-  const existing = getStatsById(statsId);
+  const existing = await getStatsById(statsId);
   if (!existing) {
     throw ApiError.notFound("Player stats tidak ditemukan");
   }
@@ -162,13 +162,13 @@ export const PATCH = RouteHandler(async (req, ctx) => {
   };
 
   validateStatsDomain(nextState.goals, nextState.shots);
-  validateAssignment(existing.player_id, existing.season_id, existing.club_id);
+  await validateAssignment(existing.player_id, existing.season_id, existing.club_id);
 
   const now = nowIsoString();
 
   try {
-    const tx = db.transaction(() => {
-      orm
+    await orm.transaction(async (tx: typeof orm) => {
+      await tx
         .update(player_stats)
         .set({
           minutes_played: nextState.minutes_played,
@@ -181,7 +181,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
         .where(eq(player_stats.id, statsId))
         .run();
 
-      orm
+      await tx
         .insert(player_stats_history)
         .values({
           id: randomUUID(),
@@ -203,13 +203,11 @@ export const PATCH = RouteHandler(async (req, ctx) => {
         })
         .run();
     });
-
-    tx();
   } catch {
     throw ApiError.server("Gagal memperbarui stats dan menyimpan history");
   }
 
-  const item = orm
+  const item = await orm
     .select({
       id: player_stats.id,
       player_id: player_stats.player_id,

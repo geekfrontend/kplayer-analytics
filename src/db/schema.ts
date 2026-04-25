@@ -1,12 +1,12 @@
 import {
   index,
   integer,
-  sqliteTable,
+  pgTable,
   text,
   uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+} from "drizzle-orm/pg-core";
 
-export const users = sqliteTable("users", {
+export const users = pgTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
@@ -17,7 +17,7 @@ export const users = sqliteTable("users", {
   deleted_at: text("deleted_at"),
 });
 
-export const sessions = sqliteTable("sessions", {
+export const sessions = pgTable("sessions", {
   id: text("id").primaryKey(),
   user_id: text("user_id").notNull(),
   token: text("token").notNull().unique(),
@@ -25,7 +25,7 @@ export const sessions = sqliteTable("sessions", {
   created_at: text("created_at").notNull(),
 });
 
-export const seasons = sqliteTable("seasons", {
+export const seasons = pgTable("seasons", {
   id: text("id").primaryKey(),
   name: text("name").notNull().unique(),
   start_date: text("start_date").notNull(),
@@ -36,7 +36,7 @@ export const seasons = sqliteTable("seasons", {
   deleted_at: text("deleted_at"),
 });
 
-export const clubs = sqliteTable("clubs", {
+export const clubs = pgTable("clubs", {
   id: text("id").primaryKey(),
   name: text("name").notNull().unique(),
   country: text("country"),
@@ -44,7 +44,7 @@ export const clubs = sqliteTable("clubs", {
   updated_at: text("updated_at").notNull(),
 });
 
-export const players = sqliteTable("players", {
+export const players = pgTable("players", {
   id: text("id").primaryKey(),
   full_name: text("full_name").notNull(),
   date_of_birth: text("date_of_birth").notNull(),
@@ -54,7 +54,7 @@ export const players = sqliteTable("players", {
   updated_at: text("updated_at").notNull(),
 });
 
-export const season_clubs = sqliteTable(
+export const season_clubs = pgTable(
   "season_clubs",
   {
     id: text("id").primaryKey(),
@@ -76,7 +76,7 @@ export const season_clubs = sqliteTable(
   }),
 );
 
-export const player_club_history = sqliteTable(
+export const player_club_history = pgTable(
   "player_club_history",
   {
     id: text("id").primaryKey(),
@@ -105,7 +105,7 @@ export const player_club_history = sqliteTable(
   }),
 );
 
-export const player_stats = sqliteTable(
+export const player_stats = pgTable(
   "player_stats",
   {
     id: text("id").primaryKey(),
@@ -150,7 +150,7 @@ export const player_stats = sqliteTable(
   }),
 );
 
-export const player_stats_history = sqliteTable(
+export const player_stats_history = pgTable(
   "player_stats_history",
   {
     id: text("id").primaryKey(),

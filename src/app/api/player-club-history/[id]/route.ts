@@ -4,7 +4,7 @@ import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { nowIsoString, orm } from "@/db/sqlite";
+import { nowIsoString, orm } from "@/db/postgres";
 import {
   clubs,
   player_club_history,
@@ -50,38 +50,42 @@ function validateDateOrder(joinDate: string, leaveDate: string | null) {
   }
 }
 
-function validateMasterReferences(playerId: string, seasonId: string, clubId: string) {
-  const player = orm
+async function validateMasterReferences(
+  playerId: string,
+  seasonId: string,
+  clubId: string,
+) {
+  const player = (await orm
     .select({ id: players.id })
     .from(players)
     .where(eq(players.id, playerId))
     .limit(1)
-    .get() as { id: string } | undefined;
+    .get()) as { id: string } | undefined;
   if (!player) {
     throw ApiError.badRequest("Player tidak ditemukan");
   }
 
-  const season = orm
+  const season = (await orm
     .select({ id: seasons.id })
     .from(seasons)
     .where(eq(seasons.id, seasonId))
     .limit(1)
-    .get() as { id: string } | undefined;
+    .get()) as { id: string } | undefined;
   if (!season) {
     throw ApiError.badRequest("Season tidak ditemukan");
   }
 
-  const club = orm
+  const club = (await orm
     .select({ id: clubs.id })
     .from(clubs)
     .where(eq(clubs.id, clubId))
     .limit(1)
-    .get() as { id: string } | undefined;
+    .get()) as { id: string } | undefined;
   if (!club) {
     throw ApiError.badRequest("Club tidak ditemukan");
   }
 
-  const seasonClub = orm
+  const seasonClub = (await orm
     .select({ id: season_clubs.id })
     .from(season_clubs)
     .where(
@@ -91,7 +95,7 @@ function validateMasterReferences(playerId: string, seasonId: string, clubId: st
       ),
     )
     .limit(1)
-    .get() as { id: string } | undefined;
+    .get()) as { id: string } | undefined;
 
   if (!seasonClub) {
     throw ApiError.badRequest(
@@ -100,12 +104,12 @@ function validateMasterReferences(playerId: string, seasonId: string, clubId: st
   }
 }
 
-function ensureNoActiveConflict(
+async function ensureNoActiveConflict(
   assignmentId: string,
   playerId: string,
   seasonId: string,
 ) {
-  const activeAssignment = orm
+  const activeAssignment = (await orm
     .select({ id: player_club_history.id })
     .from(player_club_history)
     .where(
@@ -117,7 +121,7 @@ function ensureNoActiveConflict(
       ),
     )
     .limit(1)
-    .get() as { id: string } | undefined;
+    .get()) as { id: string } | undefined;
 
   if (activeAssignment) {
     throw ApiError.conflict(
@@ -136,7 +140,7 @@ async function parseAssignmentId(params: Promise<Record<string, string>>) {
 }
 
 export const PATCH = RouteHandler(async (req, ctx) => {
-  const user = requireAuth(req);
+  const user = await requireAuth(req);
   requireRole(user, ["admin"]);
 
   const assignmentId = await parseAssignmentId(ctx.params);
@@ -145,7 +149,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     throw ApiError.badRequest("Input assignment tidak valid", parsed.error.issues);
   }
 
-  const existing = orm
+  const existing = await orm
     .select({
       id: player_club_history.id,
       player_id: player_club_history.player_id,
@@ -182,17 +186,21 @@ export const PATCH = RouteHandler(async (req, ctx) => {
   };
 
   validateDateOrder(nextState.join_date, nextState.leave_date);
-  validateMasterReferences(
+  await validateMasterReferences(
     nextState.player_id,
     nextState.season_id,
     nextState.club_id,
   );
 
   if (nextState.is_active) {
-    ensureNoActiveConflict(assignmentId, nextState.player_id, nextState.season_id);
+    await ensureNoActiveConflict(
+      assignmentId,
+      nextState.player_id,
+      nextState.season_id,
+    );
   }
 
-  orm
+  await orm
     .update(player_club_history)
     .set({
       player_id: nextState.player_id,
@@ -206,7 +214,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     .where(eq(player_club_history.id, assignmentId))
     .run();
 
-  const item = orm
+  const item = await orm
     .select({
       id: player_club_history.id,
       player_id: player_club_history.player_id,
@@ -233,11 +241,11 @@ export const PATCH = RouteHandler(async (req, ctx) => {
 });
 
 export const DELETE = RouteHandler(async (req, ctx) => {
-  const user = requireAuth(req);
+  const user = await requireAuth(req);
   requireRole(user, ["admin"]);
 
   const assignmentId = await parseAssignmentId(ctx.params);
-  const result = orm
+  const result = await orm
     .delete(player_club_history)
     .where(eq(player_club_history.id, assignmentId))
     .run();

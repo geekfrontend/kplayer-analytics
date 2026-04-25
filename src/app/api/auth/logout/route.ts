@@ -4,8 +4,7 @@ import { deleteSessionByToken, getBearerToken } from "@/app/api/utils/auth";
 
 export const POST = RouteHandler(async (req) => {
   const token = getBearerToken(req);
-  deleteSessionByToken(token);
+  await deleteSessionByToken(token);
 
   return ApiResponse.ok("Logout success");
 });
-

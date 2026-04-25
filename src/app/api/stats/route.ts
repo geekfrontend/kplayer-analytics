@@ -4,7 +4,7 @@ import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { orm } from "@/db/sqlite";
+import { orm } from "@/db/postgres";
 import { clubs, player_stats, players, seasons } from "@/db/schema";
 
 const querySchema = z.object({
@@ -20,7 +20,7 @@ const querySchema = z.object({
 });
 
 export const GET = RouteHandler(async (req) => {
-  requireAuth(req);
+  await requireAuth(req);
 
   const parsedQuery = querySchema.safeParse({
     season_id: req.nextUrl.searchParams.get("season_id") ?? undefined,
@@ -63,7 +63,7 @@ export const GET = RouteHandler(async (req) => {
 
   const orderByExpr = sort_order === "asc" ? asc(orderByColumn) : desc(orderByColumn);
 
-  const items = orm
+  const items = await orm
     .select({
       id: player_stats.id,
       player_id: player_stats.player_id,
@@ -91,11 +91,11 @@ export const GET = RouteHandler(async (req) => {
     .offset(offset)
     .all();
 
-  const countResult = orm
+  const countResult = (await orm
     .select({ total: count() })
     .from(player_stats)
     .where(whereClause)
-    .get();
+    .get()) as { total: number } | undefined;
 
   return ApiResponse.ok("Stats fetched", {
     items,

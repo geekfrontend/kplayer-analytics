@@ -4,7 +4,7 @@ import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { orm } from "@/db/sqlite";
+import { orm } from "@/db/postgres";
 import { player_stats, players, seasons } from "@/db/schema";
 
 const querySchema = z.object({
@@ -24,7 +24,7 @@ type TopAssistRow = {
 };
 
 export const GET = RouteHandler(async (req) => {
-  requireAuth(req);
+  await requireAuth(req);
 
   const parsedQuery = querySchema.safeParse({
     season_id: req.nextUrl.searchParams.get("season_id") ?? undefined,
@@ -36,7 +36,7 @@ export const GET = RouteHandler(async (req) => {
 
   const { season_id } = parsedQuery.data;
 
-  const season = orm
+  const season = await orm
     .select({ id: seasons.id })
     .from(seasons)
     .where(eq(seasons.id, season_id))
@@ -47,13 +47,13 @@ export const GET = RouteHandler(async (req) => {
     throw ApiError.notFound("Season tidak ditemukan");
   }
 
-  const totalPlayersResult = orm
+  const totalPlayersResult = (await orm
     .select({ total: sql<number>`COUNT(DISTINCT ${player_stats.player_id})` })
     .from(player_stats)
     .where(eq(player_stats.season_id, season_id))
-    .get();
+    .get()) as { total: number } | undefined;
 
-  const topScorer = orm
+  const topScorer = await orm
     .select({
       player_id: player_stats.player_id,
       full_name: players.full_name,
@@ -67,7 +67,7 @@ export const GET = RouteHandler(async (req) => {
     .limit(1)
     .all() as TopScorerRow[];
 
-  const topAssist = orm
+  const topAssist = await orm
     .select({
       player_id: player_stats.player_id,
       full_name: players.full_name,

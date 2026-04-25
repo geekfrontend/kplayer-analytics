@@ -4,7 +4,7 @@ import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { hashPassword, requireAuth, requireRole } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { nowIsoString, orm } from "@/db/sqlite";
+import { nowIsoString, orm } from "@/db/postgres";
 import { sessions, users } from "@/db/schema";
 
 const paramsSchema = z.object({
@@ -30,7 +30,7 @@ async function parseUserId(paramsPromise: Promise<Record<string, string>>) {
 }
 
 export const PATCH = RouteHandler(async (req, ctx) => {
-  const currentUser = requireAuth(req);
+  const currentUser = await requireAuth(req);
   requireRole(currentUser, ["admin"]);
 
   const userId = await parseUserId(ctx.params);
@@ -43,7 +43,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     );
   }
 
-  const existingUser = orm
+  const existingUser = await orm
     .select({ id: users.id })
     .from(users)
     .where(eq(users.id, userId))
@@ -64,7 +64,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     .where(eq(users.id, userId))
     .run();
 
-  orm.delete(sessions).where(eq(sessions.user_id, userId)).run();
+  await orm.delete(sessions).where(eq(sessions.user_id, userId)).run();
 
   return ApiResponse.ok("Password user berhasil di-reset");
 });

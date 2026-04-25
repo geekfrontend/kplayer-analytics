@@ -4,7 +4,7 @@ import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole, UserRole } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { orm, nowIsoString } from "@/db/sqlite";
+import { orm, nowIsoString } from "@/db/postgres";
 import { sessions, users } from "@/db/schema";
 
 const paramsSchema = z.object({
@@ -50,11 +50,11 @@ async function parseUserId(paramsPromise: Promise<Record<string, string>>) {
 }
 
 export const GET = RouteHandler(async (req, ctx) => {
-  const currentUser = requireAuth(req);
+  const currentUser = await requireAuth(req);
   requireRole(currentUser, ["admin"]);
 
   const userId = await parseUserId(ctx.params);
-  const user = orm
+  const user = await orm
     .select({
       id: users.id,
       name: users.name,
@@ -76,7 +76,7 @@ export const GET = RouteHandler(async (req, ctx) => {
 });
 
 export const PATCH = RouteHandler(async (req, ctx) => {
-  const currentUser = requireAuth(req);
+  const currentUser = await requireAuth(req);
   requireRole(currentUser, ["admin"]);
 
   const userId = await parseUserId(ctx.params);
@@ -89,7 +89,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     );
   }
 
-  const existingUser = orm
+  const existingUser = await orm
     .select({ id: users.id })
     .from(users)
     .where(and(eq(users.id, userId), isNull(users.deleted_at)))
@@ -120,7 +120,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
   }
 
   try {
-    orm.update(users).set(updates).where(eq(users.id, userId)).run();
+    await orm.update(users).set(updates).where(eq(users.id, userId)).run();
   } catch (error) {
     if (getSqliteErrorCode(error) === "SQLITE_CONSTRAINT_UNIQUE") {
       throw ApiError.conflict("Email sudah terdaftar");
@@ -128,7 +128,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     throw error;
   }
 
-  const updatedUser = orm
+  const updatedUser = await orm
     .select({
       id: users.id,
       name: users.name,
@@ -146,12 +146,12 @@ export const PATCH = RouteHandler(async (req, ctx) => {
 });
 
 export const DELETE = RouteHandler(async (req, ctx) => {
-  const currentUser = requireAuth(req);
+  const currentUser = await requireAuth(req);
   requireRole(currentUser, ["admin"]);
 
   const userId = await parseUserId(ctx.params);
 
-  const existingUser = orm
+  const existingUser = await orm
     .select({ id: users.id })
     .from(users)
     .where(and(eq(users.id, userId), isNull(users.deleted_at)))
@@ -176,7 +176,7 @@ export const DELETE = RouteHandler(async (req, ctx) => {
     .where(eq(users.id, userId))
     .run();
 
-  orm.delete(sessions).where(eq(sessions.user_id, userId)).run();
+  await orm.delete(sessions).where(eq(sessions.user_id, userId)).run();
 
   return ApiResponse.ok("User berhasil di-soft-delete");
 });

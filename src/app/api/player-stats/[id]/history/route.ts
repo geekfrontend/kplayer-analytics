@@ -4,7 +4,7 @@ import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { orm } from "@/db/sqlite";
+import { orm } from "@/db/postgres";
 import { player_stats, player_stats_history } from "@/db/schema";
 
 const paramsSchema = z.object({
@@ -42,7 +42,7 @@ function parseJsonPayload(payload: string) {
 }
 
 export const GET = RouteHandler(async (req, ctx) => {
-  requireAuth(req);
+  await requireAuth(req);
 
   const statsId = await parseStatsId(ctx.params);
   const parsedQuery = querySchema.safeParse({
@@ -54,7 +54,7 @@ export const GET = RouteHandler(async (req, ctx) => {
     throw ApiError.badRequest("Query tidak valid", parsedQuery.error.issues);
   }
 
-  const stats = orm
+  const stats = await orm
     .select({ id: player_stats.id })
     .from(player_stats)
     .where(eq(player_stats.id, statsId))
@@ -68,7 +68,7 @@ export const GET = RouteHandler(async (req, ctx) => {
   const { page, limit } = parsedQuery.data;
   const offset = (page - 1) * limit;
 
-  const historyItems = orm
+  const historyItems = await orm
     .select({
       id: player_stats_history.id,
       player_stats_id: player_stats_history.player_stats_id,
@@ -84,11 +84,11 @@ export const GET = RouteHandler(async (req, ctx) => {
     .offset(offset)
     .all() as HistoryRow[];
 
-  const countResult = orm
+  const countResult = (await orm
     .select({ total: count() })
     .from(player_stats_history)
     .where(and(eq(player_stats_history.player_stats_id, statsId)))
-    .get();
+    .get()) as { total: number } | undefined;
 
   return ApiResponse.ok("Player stats history fetched", {
     items: historyItems.map((item) => ({

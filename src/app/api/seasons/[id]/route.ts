@@ -4,7 +4,7 @@ import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { nowIsoString, orm } from "@/db/sqlite";
+import { nowIsoString, orm } from "@/db/postgres";
 import { seasons } from "@/db/schema";
 
 const paramsSchema = z.object({
@@ -56,10 +56,10 @@ async function parseSeasonId(params: Promise<Record<string, string>>) {
 }
 
 export const GET = RouteHandler(async (req, ctx) => {
-  requireAuth(req);
+  await requireAuth(req);
   const seasonId = await parseSeasonId(ctx.params);
 
-  const season = orm
+  const season = await orm
     .select({
       id: seasons.id,
       name: seasons.name,
@@ -82,7 +82,7 @@ export const GET = RouteHandler(async (req, ctx) => {
 });
 
 export const PATCH = RouteHandler(async (req, ctx) => {
-  const user = requireAuth(req);
+  const user = await requireAuth(req);
   requireRole(user, ["admin"]);
   const seasonId = await parseSeasonId(ctx.params);
 
@@ -91,7 +91,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     throw ApiError.badRequest("Input season tidak valid", parsed.error.issues);
   }
 
-  const existing = orm
+  const existing = await orm
     .select({ id: seasons.id })
     .from(seasons)
     .where(eq(seasons.id, seasonId))
@@ -125,7 +125,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
   }
 
   try {
-    orm.update(seasons).set(updates).where(eq(seasons.id, seasonId)).run();
+    await orm.update(seasons).set(updates).where(eq(seasons.id, seasonId)).run();
   } catch (error) {
     if (getSqliteErrorCode(error) === "SQLITE_CONSTRAINT_UNIQUE") {
       throw ApiError.conflict("Season sudah terdaftar");
@@ -133,7 +133,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     throw error;
   }
 
-  const season = orm
+  const season = await orm
     .select({
       id: seasons.id,
       name: seasons.name,
@@ -152,11 +152,11 @@ export const PATCH = RouteHandler(async (req, ctx) => {
 });
 
 export const DELETE = RouteHandler(async (req, ctx) => {
-  const user = requireAuth(req);
+  const user = await requireAuth(req);
   requireRole(user, ["admin"]);
   const seasonId = await parseSeasonId(ctx.params);
 
-  const result = orm.delete(seasons).where(eq(seasons.id, seasonId)).run();
+  const result = await orm.delete(seasons).where(eq(seasons.id, seasonId)).run();
   if (result.changes < 1) {
     throw ApiError.notFound("Season tidak ditemukan");
   }

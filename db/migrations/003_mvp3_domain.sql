@@ -1,5 +1,3 @@
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE IF NOT EXISTS season_clubs (
   id TEXT PRIMARY KEY,
   season_id TEXT NOT NULL,

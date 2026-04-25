@@ -5,7 +5,7 @@ import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { nowIsoString, orm } from "@/db/sqlite";
+import { nowIsoString, orm } from "@/db/postgres";
 import { players } from "@/db/schema";
 
 const querySchema = z.object({
@@ -32,7 +32,7 @@ function validateDateOfBirth(dateOfBirth: string) {
 }
 
 export const GET = RouteHandler(async (req) => {
-  requireAuth(req);
+  await requireAuth(req);
 
   const parsedQuery = querySchema.safeParse({
     page: req.nextUrl.searchParams.get("page") ?? undefined,
@@ -52,7 +52,7 @@ export const GET = RouteHandler(async (req) => {
   const whereClause =
     whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
-  const items = orm
+  const items = await orm
     .select({
       id: players.id,
       full_name: players.full_name,
@@ -69,11 +69,11 @@ export const GET = RouteHandler(async (req) => {
     .offset(offset)
     .all();
 
-  const countResult = orm
+  const countResult = (await orm
     .select({ total: count() })
     .from(players)
     .where(whereClause)
-    .get();
+    .get()) as { total: number } | undefined;
 
   return ApiResponse.ok("Player list fetched", {
     items,
@@ -87,7 +87,7 @@ export const GET = RouteHandler(async (req) => {
 });
 
 export const POST = RouteHandler(async (req) => {
-  const user = requireAuth(req);
+  const user = await requireAuth(req);
   requireRole(user, ["admin"]);
 
   const parsed = createPlayerSchema.safeParse(await req.json());

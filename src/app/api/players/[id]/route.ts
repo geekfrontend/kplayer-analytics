@@ -4,7 +4,7 @@ import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { nowIsoString, orm } from "@/db/sqlite";
+import { nowIsoString, orm } from "@/db/postgres";
 import { players } from "@/db/schema";
 
 const paramsSchema = z.object({
@@ -51,10 +51,10 @@ async function parsePlayerId(params: Promise<Record<string, string>>) {
 }
 
 export const GET = RouteHandler(async (req, ctx) => {
-  requireAuth(req);
+  await requireAuth(req);
   const playerId = await parsePlayerId(ctx.params);
 
-  const player = orm
+  const player = await orm
     .select({
       id: players.id,
       full_name: players.full_name,
@@ -77,7 +77,7 @@ export const GET = RouteHandler(async (req, ctx) => {
 });
 
 export const PATCH = RouteHandler(async (req, ctx) => {
-  const user = requireAuth(req);
+  const user = await requireAuth(req);
   requireRole(user, ["admin"]);
   const playerId = await parsePlayerId(ctx.params);
 
@@ -90,7 +90,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     validateDateOfBirth(parsed.data.date_of_birth);
   }
 
-  const existing = orm
+  const existing = await orm
     .select({ id: players.id })
     .from(players)
     .where(eq(players.id, playerId))
@@ -123,9 +123,9 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     updates.primary_position = parsed.data.primary_position;
   }
 
-  orm.update(players).set(updates).where(eq(players.id, playerId)).run();
+  await orm.update(players).set(updates).where(eq(players.id, playerId)).run();
 
-  const player = orm
+  const player = await orm
     .select({
       id: players.id,
       full_name: players.full_name,
@@ -144,11 +144,11 @@ export const PATCH = RouteHandler(async (req, ctx) => {
 });
 
 export const DELETE = RouteHandler(async (req, ctx) => {
-  const user = requireAuth(req);
+  const user = await requireAuth(req);
   requireRole(user, ["admin"]);
   const playerId = await parsePlayerId(ctx.params);
 
-  const result = orm.delete(players).where(eq(players.id, playerId)).run();
+  const result = await orm.delete(players).where(eq(players.id, playerId)).run();
   if (result.changes < 1) {
     throw ApiError.notFound("Player tidak ditemukan");
   }

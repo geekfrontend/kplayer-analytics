@@ -4,7 +4,7 @@ import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
-import { orm } from "@/db/sqlite";
+import { orm } from "@/db/postgres";
 import { season_clubs } from "@/db/schema";
 
 const paramsSchema = z.object({
@@ -20,11 +20,11 @@ async function parseSeasonClubId(params: Promise<Record<string, string>>) {
 }
 
 export const DELETE = RouteHandler(async (req, ctx) => {
-  const user = requireAuth(req);
+  const user = await requireAuth(req);
   requireRole(user, ["admin"]);
 
   const id = await parseSeasonClubId(ctx.params);
-  const result = orm.delete(season_clubs).where(eq(season_clubs.id, id)).run();
+  const result = await orm.delete(season_clubs).where(eq(season_clubs.id, id)).run();
 
   if (result.changes < 1) {
     throw ApiError.notFound("Season club tidak ditemukan");

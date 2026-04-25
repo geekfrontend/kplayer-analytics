@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { and, eq, isNull } from "drizzle-orm";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { NextRequest } from "next/server";
-import { orm } from "@/db/sqlite";
+import { orm } from "@/db/postgres";
 import { sessions, users } from "@/db/schema";
 import { ApiError } from "./api-error";
 
@@ -92,7 +92,7 @@ export function createSession(
   token: string,
   expiresAt: string,
 ) {
-  orm
+  return orm
     .insert(sessions)
     .values({
       id: randomUUID(),
@@ -105,11 +105,11 @@ export function createSession(
 }
 
 export function deleteSessionByToken(token: string) {
-  orm.delete(sessions).where(eq(sessions.token, token)).run();
+  return orm.delete(sessions).where(eq(sessions.token, token)).run();
 }
 
-export function findUserByEmail(email: string) {
-  const result = orm
+export async function findUserByEmail(email: string) {
+  const result = (await orm
     .select({
       id: users.id,
       name: users.name,
@@ -120,20 +120,20 @@ export function findUserByEmail(email: string) {
     .from(users)
     .where(and(eq(users.email, email), isNull(users.deleted_at)))
     .limit(1)
-    .get();
-
-  return result as
+    .get()) as
     | (UserRow & {
         password_hash: string;
       })
     | undefined;
+
+  return result;
 }
 
-export function requireAuth(req: NextRequest): UserRow {
+export async function requireAuth(req: NextRequest): Promise<UserRow> {
   const token = getBearerToken(req);
   const payload = verifyAccessToken(token);
 
-  const sessionUser = orm
+  const sessionUser = (await orm
     .select({
       id: users.id,
       name: users.name,
@@ -145,14 +145,14 @@ export function requireAuth(req: NextRequest): UserRow {
     .innerJoin(users, eq(users.id, sessions.user_id))
     .where(and(eq(sessions.token, token), isNull(users.deleted_at)))
     .limit(1)
-    .get() as SessionUserRow | undefined;
+    .get()) as SessionUserRow | undefined;
 
   if (!sessionUser) {
     throw ApiError.unauthorized("Session tidak ditemukan");
   }
 
   if (new Date(sessionUser.expires_at).getTime() <= Date.now()) {
-    deleteSessionByToken(token);
+    await deleteSessionByToken(token);
     throw ApiError.unauthorized("Session sudah kedaluwarsa");
   }
 
