@@ -1,6 +1,7 @@
+import { NextRequest } from "next/server";
+import { randomUUID } from "node:crypto";
 import { STATUS_CODES } from "../constants/status-codes";
 import { logger } from "./logger";
-import { NextRequest } from "next/server";
 
 type HandlerContext = {
   params: Promise<Record<string, string>>;
@@ -27,13 +28,23 @@ function getHttpStatusFromError(error: Error): number | null {
 
 export function RouteHandler(fn: RouteHandlerFn) {
   return async (req: NextRequest, ctx: HandlerContext): Promise<Response> => {
-    try {
-      return await fn(req, ctx);
-    } catch (error: unknown) {
-      logger.error("API Error", { error });
+    const requestId = req.headers.get("x-request-id") ?? randomUUID();
+    const startedAt = Date.now();
 
+    try {
+      const response = await fn(req, ctx);
+      logger.info("API Request", {
+        request_id: requestId,
+        method: req.method,
+        path: req.nextUrl.pathname,
+        status: response.status,
+        duration_ms: Date.now() - startedAt,
+      });
+      return response;
+    } catch (error: unknown) {
       let message = "Internal Server Error";
       let status: number = STATUS_CODES.INTERNAL_SERVER_ERROR;
+      let errors: unknown;
 
       if (error instanceof Error) {
         message = error.message;
@@ -42,17 +53,34 @@ export function RouteHandler(fn: RouteHandlerFn) {
         if (errorStatus !== null) {
           status = errorStatus;
         }
+
+        const candidate = error as Error & { errors?: unknown };
+        if (candidate.errors !== undefined) {
+          errors = candidate.errors;
+        }
       }
+
+      logger.error("API Error", {
+        request_id: requestId,
+        method: req.method,
+        path: req.nextUrl.pathname,
+        status,
+        duration_ms: Date.now() - startedAt,
+        error,
+      });
 
       return new Response(
         JSON.stringify({
           success: false,
           message,
+          statusCode: status,
+          ...(errors !== undefined && { errors }),
         }),
         {
           status,
           headers: {
             "Content-Type": "application/json",
+            "x-request-id": requestId,
           },
         },
       );

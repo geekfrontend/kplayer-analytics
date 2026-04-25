@@ -1,0 +1,289 @@
+import { randomUUID } from "node:crypto";
+import { and, count, desc, eq, SQL } from "drizzle-orm";
+import { z } from "zod";
+import { ApiError } from "@/app/api/utils/api-error";
+import { ApiResponse } from "@/app/api/utils/api-response";
+import { requireAuth, requireRole } from "@/app/api/utils/auth";
+import { RouteHandler } from "@/app/api/utils/route-handler";
+import { nowIsoString, orm } from "@/db/sqlite";
+import {
+  clubs,
+  player_club_history,
+  player_stats,
+  players,
+  season_clubs,
+  seasons,
+} from "@/db/schema";
+
+const querySchema = z.object({
+  player_id: z.uuid("Format player_id tidak valid").optional(),
+  season_id: z.uuid("Format season_id tidak valid").optional(),
+  club_id: z.uuid("Format club_id tidak valid").optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+const createSchema = z
+  .object({
+    player_id: z.uuid("Format player_id tidak valid"),
+    season_id: z.uuid("Format season_id tidak valid"),
+    club_id: z.uuid("Format club_id tidak valid"),
+    minutes_played: z.coerce.number().int().min(0),
+    goals: z.coerce.number().int().min(0),
+    assists: z.coerce.number().int().min(0),
+    shots: z.coerce.number().int().min(0),
+  })
+  .refine((data) => data.shots >= data.goals, {
+    message: "shots tidak boleh lebih kecil dari goals",
+    path: ["shots"],
+  });
+
+type PlayerStatsRow = {
+  id: string;
+  player_id: string;
+  player_name: string;
+  season_id: string;
+  season_name: string;
+  club_id: string;
+  club_name: string;
+  minutes_played: number;
+  goals: number;
+  assists: number;
+  shots: number;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  updated_by: string;
+};
+
+function getSqliteErrorCode(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+  const candidate = error as { code?: unknown };
+  return typeof candidate.code === "string" ? candidate.code : null;
+}
+
+function validateStatsDomain(goals: number, shots: number) {
+  if (shots < goals) {
+    throw ApiError.badRequest("shots tidak boleh lebih kecil dari goals");
+  }
+}
+
+function validateMasterReferences(playerId: string, seasonId: string, clubId: string) {
+  const player = orm
+    .select({ id: players.id })
+    .from(players)
+    .where(eq(players.id, playerId))
+    .limit(1)
+    .get() as { id: string } | undefined;
+  if (!player) {
+    throw ApiError.badRequest("Player tidak ditemukan");
+  }
+
+  const season = orm
+    .select({ id: seasons.id })
+    .from(seasons)
+    .where(eq(seasons.id, seasonId))
+    .limit(1)
+    .get() as { id: string } | undefined;
+  if (!season) {
+    throw ApiError.badRequest("Season tidak ditemukan");
+  }
+
+  const club = orm
+    .select({ id: clubs.id })
+    .from(clubs)
+    .where(eq(clubs.id, clubId))
+    .limit(1)
+    .get() as { id: string } | undefined;
+  if (!club) {
+    throw ApiError.badRequest("Club tidak ditemukan");
+  }
+
+  const seasonClub = orm
+    .select({ id: season_clubs.id })
+    .from(season_clubs)
+    .where(
+      and(
+        eq(season_clubs.season_id, seasonId),
+        eq(season_clubs.club_id, clubId),
+      ),
+    )
+    .limit(1)
+    .get() as { id: string } | undefined;
+  if (!seasonClub) {
+    throw ApiError.badRequest(
+      "Club belum terdaftar pada season terkait di season-clubs",
+    );
+  }
+}
+
+function validateAssignment(playerId: string, seasonId: string, clubId: string) {
+  const assignment = orm
+    .select({ id: player_club_history.id })
+    .from(player_club_history)
+    .where(
+      and(
+        eq(player_club_history.player_id, playerId),
+        eq(player_club_history.season_id, seasonId),
+        eq(player_club_history.club_id, clubId),
+      ),
+    )
+    .limit(1)
+    .get() as { id: string } | undefined;
+
+  if (!assignment) {
+    throw ApiError.badRequest(
+      "Stats hanya bisa dibuat jika assignment player-season-club valid",
+    );
+  }
+}
+
+export const GET = RouteHandler(async (req) => {
+  requireAuth(req);
+
+  const parsedQuery = querySchema.safeParse({
+    player_id: req.nextUrl.searchParams.get("player_id") ?? undefined,
+    season_id: req.nextUrl.searchParams.get("season_id") ?? undefined,
+    club_id: req.nextUrl.searchParams.get("club_id") ?? undefined,
+    page: req.nextUrl.searchParams.get("page") ?? undefined,
+    limit: req.nextUrl.searchParams.get("limit") ?? undefined,
+  });
+
+  if (!parsedQuery.success) {
+    throw ApiError.badRequest("Query tidak valid", parsedQuery.error.issues);
+  }
+
+  const { player_id, season_id, club_id, page, limit } = parsedQuery.data;
+  const offset = (page - 1) * limit;
+
+  const whereConditions: SQL[] = [];
+  if (player_id) {
+    whereConditions.push(eq(player_stats.player_id, player_id));
+  }
+  if (season_id) {
+    whereConditions.push(eq(player_stats.season_id, season_id));
+  }
+  if (club_id) {
+    whereConditions.push(eq(player_stats.club_id, club_id));
+  }
+
+  const whereClause =
+    whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+  const items = orm
+    .select({
+      id: player_stats.id,
+      player_id: player_stats.player_id,
+      player_name: players.full_name,
+      season_id: player_stats.season_id,
+      season_name: seasons.name,
+      club_id: player_stats.club_id,
+      club_name: clubs.name,
+      minutes_played: player_stats.minutes_played,
+      goals: player_stats.goals,
+      assists: player_stats.assists,
+      shots: player_stats.shots,
+      created_at: player_stats.created_at,
+      updated_at: player_stats.updated_at,
+      created_by: player_stats.created_by,
+      updated_by: player_stats.updated_by,
+    })
+    .from(player_stats)
+    .innerJoin(players, eq(player_stats.player_id, players.id))
+    .innerJoin(seasons, eq(player_stats.season_id, seasons.id))
+    .innerJoin(clubs, eq(player_stats.club_id, clubs.id))
+    .where(whereClause)
+    .orderBy(desc(player_stats.updated_at))
+    .limit(limit)
+    .offset(offset)
+    .all() as PlayerStatsRow[];
+
+  const countResult = orm
+    .select({ total: count() })
+    .from(player_stats)
+    .where(whereClause)
+    .get();
+
+  return ApiResponse.ok("Player stats fetched", {
+    items,
+    pagination: {
+      page,
+      limit,
+      total: countResult?.total ?? 0,
+      total_pages: Math.max(1, Math.ceil((countResult?.total ?? 0) / limit)),
+    },
+  });
+});
+
+export const POST = RouteHandler(async (req) => {
+  const user = requireAuth(req);
+  requireRole(user, ["admin"]);
+
+  const parsed = createSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    throw ApiError.badRequest("Input stats tidak valid", parsed.error.issues);
+  }
+
+  const payload = parsed.data;
+  validateStatsDomain(payload.goals, payload.shots);
+  validateMasterReferences(payload.player_id, payload.season_id, payload.club_id);
+  validateAssignment(payload.player_id, payload.season_id, payload.club_id);
+
+  const id = randomUUID();
+  const now = nowIsoString();
+
+  try {
+    orm
+      .insert(player_stats)
+      .values({
+        id,
+        player_id: payload.player_id,
+        season_id: payload.season_id,
+        club_id: payload.club_id,
+        minutes_played: payload.minutes_played,
+        goals: payload.goals,
+        assists: payload.assists,
+        shots: payload.shots,
+        created_at: now,
+        updated_at: now,
+        created_by: user.id,
+        updated_by: user.id,
+      })
+      .run();
+  } catch (error) {
+    if (getSqliteErrorCode(error) === "SQLITE_CONSTRAINT_UNIQUE") {
+      throw ApiError.conflict("Stat player untuk scope tersebut sudah ada");
+    }
+    throw error;
+  }
+
+  const item = orm
+    .select({
+      id: player_stats.id,
+      player_id: player_stats.player_id,
+      player_name: players.full_name,
+      season_id: player_stats.season_id,
+      season_name: seasons.name,
+      club_id: player_stats.club_id,
+      club_name: clubs.name,
+      minutes_played: player_stats.minutes_played,
+      goals: player_stats.goals,
+      assists: player_stats.assists,
+      shots: player_stats.shots,
+      created_at: player_stats.created_at,
+      updated_at: player_stats.updated_at,
+      created_by: player_stats.created_by,
+      updated_by: player_stats.updated_by,
+    })
+    .from(player_stats)
+    .innerJoin(players, eq(player_stats.player_id, players.id))
+    .innerJoin(seasons, eq(player_stats.season_id, seasons.id))
+    .innerJoin(clubs, eq(player_stats.club_id, clubs.id))
+    .where(eq(player_stats.id, id))
+    .limit(1)
+    .get() as PlayerStatsRow;
+
+  return ApiResponse.created("Player stats berhasil dibuat", { item });
+});
