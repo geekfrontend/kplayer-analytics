@@ -2,7 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, Input, Spinner } from "@heroui/react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Button,
+  Card,
+  Description,
+  FieldError,
+  Form,
+  Input,
+  Label,
+  Spinner,
+  TextField,
+} from "@heroui/react";
+import { z } from "zod";
 import {
   clearAccessToken,
   getAccessToken,
@@ -11,12 +24,36 @@ import {
   toUserFacingError,
 } from "@/lib/auth";
 
+const EMAIL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+
+const loginSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email wajib diisi")
+    .regex(EMAIL_REGEX, "Format email tidak valid"),
+  password: z.string().min(8, "Password minimal 8 karakter"),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [serverErrorMessage, setServerErrorMessage] = useState<string | null>(
+    null,
+  );
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+    mode: "onTouched",
+  });
 
   useEffect(() => {
     let isActive = true;
@@ -43,20 +80,18 @@ export default function LoginPage() {
     };
   }, [router]);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsLoading(true);
-    setErrorMessage(null);
-
+  async function handleLoginSubmit(values: LoginFormValues) {
+    setServerErrorMessage(null);
     try {
-      await login({ email, password });
+      await login({
+        email: values.email,
+        password: values.password,
+      });
       await me();
       router.replace("/");
     } catch (error) {
       clearAccessToken();
-      setErrorMessage(toUserFacingError(error));
-    } finally {
-      setIsLoading(false);
+      setServerErrorMessage(toUserFacingError(error));
     }
   }
 
@@ -70,36 +105,77 @@ export default function LoginPage() {
           </Card.Description>
         </Card.Header>
         <Card.Content>
-          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-            <label className="flex flex-col gap-2 text-sm">
-              <span className="text-foreground">Email</span>
-              <Input
-                type="email"
-                placeholder="admin@example.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-              />
-            </label>
-            <label className="flex flex-col gap-2 text-sm">
-              <span className="text-foreground">Password</span>
-              <Input
-                type="password"
-                placeholder="Masukkan password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-              />
-            </label>
-            {errorMessage ? (
+          <Form
+            className="flex flex-col gap-4"
+            onSubmit={handleSubmit(handleLoginSubmit)}
+          >
+            <Controller
+              control={control}
+              name="email"
+              render={({ field }) => (
+                <TextField isRequired name={field.name} type="email">
+                  <Label>Email</Label>
+                  <Input
+                    placeholder="admin@example.com"
+                    autoComplete="email"
+                    value={field.value}
+                    onChange={(event) => {
+                      setServerErrorMessage(null);
+                      field.onChange(event.target.value);
+                    }}
+                    onBlur={field.onBlur}
+                  />
+                  {errors.email?.message ? (
+                    <p className="text-sm text-danger" role="alert">
+                      {errors.email.message}
+                    </p>
+                  ) : (
+                    <FieldError />
+                  )}
+                </TextField>
+              )}
+            />
+            <Controller
+              control={control}
+              name="password"
+              render={({ field }) => (
+                <TextField isRequired name={field.name} type="password">
+                  <Label>Password</Label>
+                  <Input
+                    placeholder="Masukkan password"
+                    autoComplete="current-password"
+                    value={field.value}
+                    onChange={(event) => {
+                      setServerErrorMessage(null);
+                      field.onChange(event.target.value);
+                    }}
+                    onBlur={field.onBlur}
+                  />
+                  <Description>Gunakan password akun Anda</Description>
+                  {errors.password?.message ? (
+                    <p className="text-sm text-danger" role="alert">
+                      {errors.password.message}
+                    </p>
+                  ) : (
+                    <FieldError />
+                  )}
+                </TextField>
+              )}
+            />
+            {serverErrorMessage ? (
               <p className="text-sm text-danger" role="alert">
-                {errorMessage}
+                {serverErrorMessage}
               </p>
             ) : null}
-            <Button type="submit" variant="primary" isDisabled={isLoading}>
-              {isLoading ? <Spinner size="sm" /> : "Login"}
+            <Button
+              type="submit"
+              variant="primary"
+              isDisabled={isSubmitting}
+              className="w-full"
+            >
+              {isSubmitting ? <Spinner size="sm" /> : "Login"}
             </Button>
-          </form>
+          </Form>
         </Card.Content>
       </Card>
     </main>

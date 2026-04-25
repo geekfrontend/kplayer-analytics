@@ -62,7 +62,11 @@ export async function login(payload: LoginPayload) {
 
   const accessToken = result.envelope.data?.access_token;
   if (!accessToken) {
-    throw new ApiClientError("Token login tidak ditemukan", 500, result.requestId);
+    throw new ApiClientError(
+      "Token login tidak ditemukan",
+      500,
+      result.requestId,
+    );
   }
 
   setAccessToken(accessToken);
@@ -77,7 +81,11 @@ export async function me() {
 
   const user = result.envelope.data?.user;
   if (!user) {
-    throw new ApiClientError("Data user tidak ditemukan", 500, result.requestId);
+    throw new ApiClientError(
+      "Data user tidak ditemukan",
+      500,
+      result.requestId,
+    );
   }
 
   return user;
@@ -90,11 +98,36 @@ export async function logout() {
   });
 }
 
+function logAuthDebugInfo(error: ApiClientError) {
+  if (process.env.NODE_ENV !== "production" && error.requestId) {
+    console.debug("auth_request_failed", {
+      statusCode: error.statusCode,
+      requestId: error.requestId,
+      message: error.message,
+    });
+  }
+}
+
 export function toUserFacingError(error: unknown) {
   if (isApiClientError(error)) {
-    if (error.requestId) {
-      return `${error.message} (request_id: ${error.requestId})`;
+    logAuthDebugInfo(error);
+
+    if (error.statusCode === 0) {
+      return "Unable to connect. Please check your internet connection.";
     }
+
+    if (error.statusCode === 401) {
+      return "Invalid email or password. Please try again.";
+    }
+
+    if (error.statusCode === 403) {
+      return "You do not have permission to access this resource.";
+    }
+
+    if (error.statusCode >= 500) {
+      return "Server is currently unavailable. Please try again shortly.";
+    }
+
     return error.message;
   }
 
@@ -102,5 +135,5 @@ export function toUserFacingError(error: unknown) {
     return error.message;
   }
 
-  return "Terjadi kesalahan tidak terduga";
+  return "An unexpected error occurred. Please try again.";
 }
