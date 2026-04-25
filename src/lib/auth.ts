@@ -1,0 +1,106 @@
+import {
+  ACCESS_TOKEN_STORAGE_KEY,
+  apiRequest,
+  ApiClientError,
+  isApiClientError,
+} from "@/lib/api-client";
+
+export type UserRole = "admin" | "analyst";
+
+export type AuthUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+};
+
+type LoginPayload = {
+  email: string;
+  password: string;
+};
+
+type LoginResponseData = {
+  access_token: string;
+  token_type: "Bearer";
+  expires_in: number;
+  user: AuthUser;
+};
+
+type MeResponseData = {
+  user: AuthUser;
+};
+
+export function getAccessToken() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
+}
+
+export function setAccessToken(token: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token);
+}
+
+export function clearAccessToken() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+}
+
+export async function login(payload: LoginPayload) {
+  const result = await apiRequest<LoginResponseData>("/api/auth/login", {
+    method: "POST",
+    body: payload,
+  });
+
+  const accessToken = result.envelope.data?.access_token;
+  if (!accessToken) {
+    throw new ApiClientError("Token login tidak ditemukan", 500, result.requestId);
+  }
+
+  setAccessToken(accessToken);
+  return result.envelope.data;
+}
+
+export async function me() {
+  const result = await apiRequest<MeResponseData>("/api/auth/me", {
+    method: "GET",
+    auth: true,
+  });
+
+  const user = result.envelope.data?.user;
+  if (!user) {
+    throw new ApiClientError("Data user tidak ditemukan", 500, result.requestId);
+  }
+
+  return user;
+}
+
+export async function logout() {
+  return apiRequest<null>("/api/auth/logout", {
+    method: "POST",
+    auth: true,
+  });
+}
+
+export function toUserFacingError(error: unknown) {
+  if (isApiClientError(error)) {
+    if (error.requestId) {
+      return `${error.message} (request_id: ${error.requestId})`;
+    }
+    return error.message;
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Terjadi kesalahan tidak terduga";
+}

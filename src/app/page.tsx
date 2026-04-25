@@ -1,9 +1,0 @@
-import { Button } from "@heroui/react";
-
-export default function Home() {
-  return (
-    <div>
-      <Button>Hello World</Button>
-    </div>
-  );
-}
