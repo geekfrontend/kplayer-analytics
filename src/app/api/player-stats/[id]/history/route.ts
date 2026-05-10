@@ -8,7 +8,7 @@ import { orm } from "@/db/postgres";
 import { player_stats, player_stats_history } from "@/db/schema";
 
 const paramsSchema = z.object({
-  id: z.uuid("Format id stats tidak valid"),
+  id: z.uuid("Format id statistik tidak valid"),
 });
 
 const querySchema = z.object({
@@ -54,21 +54,21 @@ export const GET = RouteHandler(async (req, ctx) => {
     throw ApiError.badRequest("Query tidak valid", parsedQuery.error.issues);
   }
 
-  const stats = await orm
+  const stats = (await orm
     .select({ id: player_stats.id })
     .from(player_stats)
     .where(eq(player_stats.id, statsId))
     .limit(1)
-    .get() as { id: string } | undefined;
+    .get()) as { id: string } | undefined;
 
   if (!stats) {
-    throw ApiError.notFound("Player stats tidak ditemukan");
+    throw ApiError.notFound("Statistik pemain tidak ditemukan");
   }
 
   const { page, limit } = parsedQuery.data;
   const offset = (page - 1) * limit;
 
-  const historyItems = await orm
+  const historyItems = (await orm
     .select({
       id: player_stats_history.id,
       player_stats_id: player_stats_history.player_stats_id,
@@ -82,7 +82,7 @@ export const GET = RouteHandler(async (req, ctx) => {
     .orderBy(desc(player_stats_history.changed_at))
     .limit(limit)
     .offset(offset)
-    .all() as HistoryRow[];
+    .all()) as HistoryRow[];
 
   const countResult = (await orm
     .select({ total: count() })
@@ -90,7 +90,7 @@ export const GET = RouteHandler(async (req, ctx) => {
     .where(and(eq(player_stats_history.player_stats_id, statsId)))
     .get()) as { total: number } | undefined;
 
-  return ApiResponse.ok("Player stats history fetched", {
+  return ApiResponse.ok("Riwayat statistik pemain berhasil diambil", {
     items: historyItems.map((item) => ({
       id: item.id,
       player_stats_id: item.player_stats_id,

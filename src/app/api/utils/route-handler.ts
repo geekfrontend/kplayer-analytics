@@ -42,7 +42,7 @@ export function RouteHandler(fn: RouteHandlerFn) {
       });
       return response;
     } catch (error: unknown) {
-      let message = "Internal Server Error";
+      let message = "Terjadi kesalahan pada server";
       let status: number = STATUS_CODES.INTERNAL_SERVER_ERROR;
       let errors: unknown;
 
@@ -60,7 +60,7 @@ export function RouteHandler(fn: RouteHandlerFn) {
         }
       }
 
-      logger.error("API Error", {
+      logger.error("Kesalahan API", {
         request_id: requestId,
         method: req.method,
         path: req.nextUrl.pathname,

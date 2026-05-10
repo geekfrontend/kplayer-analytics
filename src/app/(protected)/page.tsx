@@ -11,6 +11,10 @@ import {
 } from "@/components/ui/card";
 import { type AuthUser, me, toUserFacingError } from "@/lib/auth";
 
+function getRoleLabel(role: AuthUser["role"]) {
+  return role === "admin" ? "Admin" : "Analis";
+}
+
 export default function DashboardPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,7 +50,7 @@ export default function DashboardPage() {
     <section className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Dashboard</CardTitle>
+          <CardTitle>Dasbor</CardTitle>
           <CardDescription>
             Ringkasan cepat fase awal KPlayer Analytics.
           </CardDescription>
@@ -70,7 +74,8 @@ export default function DashboardPage() {
                 <span className="font-medium">Email:</span> {user.email}
               </p>
               <p>
-                <span className="font-medium">Role:</span> {user.role}
+                <span className="font-medium">Peran:</span>{" "}
+                {getRoleLabel(user.role)}
               </p>
             </div>
           ) : null}

@@ -1,4 +1,5 @@
 - Always check `@/components/ui/*` first for any required elements before creating custom ones.
+- Prioritize Indonesian for UI text, labels, helper copy, validation messages, documentation, and team communication, unless specific technical requirements mandate another language.
 - Use tokens from `app/globals.css`: `--background`, `--foreground`, `--primary`, `--muted`, `--muted-foreground`, `--border`, `--ring`, `--accent`.
 - Visual tone must be warm, calm, minimal, and productivity-focused; avoid cold grays.
 - Typography uses `Poppins` (`--font-sans`, `--font-heading`) in weights `400/500/600/700`.

@@ -27,8 +27,8 @@ export const DELETE = RouteHandler(async (req, ctx) => {
   const result = await orm.delete(season_clubs).where(eq(season_clubs.id, id)).run();
 
   if (result.changes < 1) {
-    throw ApiError.notFound("Season club tidak ditemukan");
+    throw ApiError.notFound("Relasi musim-klub tidak ditemukan");
   }
 
-  return ApiResponse.ok("Season club berhasil dihapus");
+  return ApiResponse.ok("Relasi musim-klub berhasil dihapus");
 });

@@ -46,7 +46,7 @@ async function validateForeignKeys(seasonId: string, clubId: string) {
     .get()) as { id: string } | undefined;
 
   if (!season) {
-    throw ApiError.badRequest("Season tidak ditemukan");
+    throw ApiError.badRequest("Musim tidak ditemukan");
   }
 
   const club = (await orm
@@ -57,7 +57,7 @@ async function validateForeignKeys(seasonId: string, clubId: string) {
     .get()) as { id: string } | undefined;
 
   if (!club) {
-    throw ApiError.badRequest("Club tidak ditemukan");
+    throw ApiError.badRequest("Klub tidak ditemukan");
   }
 }
 
@@ -114,7 +114,7 @@ export const GET = RouteHandler(async (req) => {
     .where(whereClause)
     .get()) as { total: number } | undefined;
 
-  return ApiResponse.ok("Season club list fetched", {
+  return ApiResponse.ok("Daftar relasi musim-klub berhasil diambil", {
     items,
     pagination: {
       page,
@@ -154,7 +154,7 @@ export const POST = RouteHandler(async (req) => {
       .run();
   } catch (error) {
     if (getSqliteErrorCode(error) === "SQLITE_CONSTRAINT_UNIQUE") {
-      throw ApiError.conflict("Relasi season dan club sudah terdaftar");
+      throw ApiError.conflict("Relasi musim dan klub sudah terdaftar");
     }
     throw error;
   }
@@ -175,5 +175,5 @@ export const POST = RouteHandler(async (req) => {
     .limit(1)
     .get() as SeasonClubRow;
 
-  return ApiResponse.created("Season club berhasil dibuat", { item });
+  return ApiResponse.created("Relasi musim-klub berhasil dibuat", { item });
 });

@@ -66,5 +66,5 @@ export const PATCH = RouteHandler(async (req, ctx) => {
 
   await orm.delete(sessions).where(eq(sessions.user_id, userId)).run();
 
-  return ApiResponse.ok("Password user berhasil di-reset");
+  return ApiResponse.ok("Kata sandi pengguna berhasil diatur ulang");
 });

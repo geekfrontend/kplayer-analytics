@@ -16,9 +16,13 @@ import {
 } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
+import { useAuthUser } from "@/components/app/auth-user-context";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -65,9 +69,9 @@ const createSeasonSchema = z
     name: z
       .string()
       .trim()
-      .regex(/^\d{4}\/\d{4}$/, "Format season harus YYYY/YYYY"),
-    start_date: z.iso.date("Format start date harus YYYY-MM-DD"),
-    end_date: z.iso.date("Format end date harus YYYY-MM-DD"),
+      .regex(/^\d{4}\/\d{4}$/, "Format musim harus YYYY/YYYY"),
+    start_date: z.iso.date("Format tanggal mulai harus YYYY-MM-DD"),
+    end_date: z.iso.date("Format tanggal selesai harus YYYY-MM-DD"),
     is_active: z.boolean(),
   })
   .refine(
@@ -75,12 +79,12 @@ const createSeasonSchema = z
       Number(value.name.split("/")[1]) === Number(value.name.split("/")[0]) + 1,
     {
       path: ["name"],
-      message: "Tahun season tidak valid",
+      message: "Tahun musim tidak valid",
     },
   )
   .refine((value) => value.start_date < value.end_date, {
     path: ["end_date"],
-    message: "End date harus lebih besar dari start date",
+    message: "Tanggal selesai harus lebih besar dari tanggal mulai",
   });
 
 type CreateSeasonPayload = z.infer<typeof createSeasonSchema>;
@@ -104,6 +108,8 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 export default function SeasonsPage() {
+  const { user } = useAuthUser();
+  const canWrite = user?.role === "admin";
   const queryClient = useQueryClient();
   const [searchInput, setSearchInput] = useState("");
   const [q, setQ] = useState("");
@@ -152,6 +158,7 @@ export default function SeasonsPage() {
       });
     },
     onSuccess: async () => {
+      toast.success("Musim berhasil dibuat");
       setIsDialogOpen(false);
       form.reset();
       setPage(1);
@@ -159,12 +166,15 @@ export default function SeasonsPage() {
         queryKey: seasonsKeys.all,
       });
     },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "Gagal membuat musim."));
+    },
   });
 
   const columns = useMemo(
     () => [
       columnHelper.accessor("name", {
-        header: "Season",
+        header: "Musim",
         cell: (info) => (
           <span className="font-medium text-foreground">{info.getValue()}</span>
         ),
@@ -181,20 +191,14 @@ export default function SeasonsPage() {
         cell: (info) => {
           const isActive = info.getValue() === 1;
           return (
-            <span
-              className={
-                isActive
-                  ? "rounded-(--radius-md) bg-success/15 px-2 py-1 text-xs font-medium text-success"
-                  : "rounded-(--radius-md) bg-muted/20 px-2 py-1 text-xs font-medium text-muted"
-              }
-            >
-              {isActive ? "Active" : "Inactive"}
-            </span>
+            <Badge variant={isActive ? "default" : "outline"}>
+              {isActive ? "Aktif" : "Tidak aktif"}
+            </Badge>
           );
         },
       }),
       columnHelper.accessor("updated_at", {
-        header: "Updated",
+        header: "Diperbarui",
         cell: (info) => info.getValue().slice(0, 10),
       }),
     ],
@@ -210,10 +214,10 @@ export default function SeasonsPage() {
   const totalPages = seasonsQuery.data?.pagination.total_pages ?? 1;
 
   const queryErrorMessage = seasonsQuery.error
-    ? getErrorMessage(seasonsQuery.error, "Gagal mengambil data season.")
+    ? getErrorMessage(seasonsQuery.error, "Gagal mengambil data musim.")
     : null;
   const mutationErrorMessage = createSeasonMutation.error
-    ? getErrorMessage(createSeasonMutation.error, "Gagal membuat season.")
+    ? getErrorMessage(createSeasonMutation.error, "Gagal membuat musim.")
     : null;
   const errorMessage = mutationErrorMessage ?? queryErrorMessage;
 
@@ -231,102 +235,109 @@ export default function SeasonsPage() {
 
   return (
     <section className="space-y-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div className="space-y-1">
-            <CardTitle>Seasons</CardTitle>
-            <p className="text-sm text-muted">
-              Kelola data season dan status aktif season.
+      <Card className="border-border bg-background shadow-[0_1px_2px_rgba(2,8,23,0.04),0_8px_24px_rgba(2,8,23,0.04)]">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1.5">
+            <CardTitle>Musim</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Kelola data musim dan status aktif musim.
             </p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4" />
-                Tambah Season
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Buat Season Baru</DialogTitle>
-                <DialogDescription>
-                  Format season: `YYYY/YYYY` (contoh `2026/2027`).
-                </DialogDescription>
-              </DialogHeader>
-              <form className="space-y-4" onSubmit={handleCreateSeason}>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nama Season</Label>
-                  <Input
-                    id="name"
-                    placeholder="2026/2027"
-                    {...form.register("name")}
-                  />
-                  {form.formState.errors.name ? (
-                    <p className="text-sm text-danger" role="alert">
-                      {form.formState.errors.name.message}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {canWrite ? (
+            <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4" />
+                  Tambah Musim
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="border-border bg-background">
+                <DialogHeader>
+                  <DialogTitle>Buat Musim Baru</DialogTitle>
+                  <DialogDescription>
+                    Format musim: `YYYY/YYYY` (contoh `2026/2027`).
+                  </DialogDescription>
+                </DialogHeader>
+                <form className="space-y-4" onSubmit={handleCreateSeason}>
                   <div className="space-y-2">
-                    <Label htmlFor="start_date">Start Date</Label>
+                    <Label htmlFor="name">Nama Musim</Label>
                     <Input
-                      id="start_date"
-                      type="date"
-                      {...form.register("start_date")}
+                      id="name"
+                      placeholder="2026/2027"
+                      {...form.register("name")}
                     />
-                    {form.formState.errors.start_date ? (
+                    {form.formState.errors.name ? (
                       <p className="text-sm text-danger" role="alert">
-                        {form.formState.errors.start_date.message}
+                        {form.formState.errors.name.message}
                       </p>
                     ) : null}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="end_date">End Date</Label>
-                    <Input
-                      id="end_date"
-                      type="date"
-                      {...form.register("end_date")}
-                    />
-                    {form.formState.errors.end_date ? (
-                      <p className="text-sm text-danger" role="alert">
-                        {form.formState.errors.end_date.message}
-                      </p>
-                    ) : null}
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="start_date">Tanggal Mulai</Label>
+                      <Input
+                        id="start_date"
+                        type="date"
+                        {...form.register("start_date")}
+                      />
+                      {form.formState.errors.start_date ? (
+                        <p className="text-sm text-danger" role="alert">
+                          {form.formState.errors.start_date.message}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="end_date">Tanggal Selesai</Label>
+                      <Input
+                        id="end_date"
+                        type="date"
+                        {...form.register("end_date")}
+                      />
+                      {form.formState.errors.end_date ? (
+                        <p className="text-sm text-danger" role="alert">
+                          {form.formState.errors.end_date.message}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-                <label className="flex items-center gap-2 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-border accent-accent"
-                    {...form.register("is_active")}
-                  />
-                  Jadikan season aktif
-                </label>
-                <DialogFooter>
-                  <Button
-                    type="submit"
-                    disabled={
-                      createSeasonMutation.isPending || !form.formState.isValid
-                    }
-                  >
-                    {createSeasonMutation.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Menyimpan...
-                      </>
-                    ) : (
-                      "Simpan"
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <label className="flex items-center gap-2 text-sm text-foreground">
+                    <Checkbox
+                      checked={form.watch("is_active")}
+                      onCheckedChange={(checked) =>
+                        form.setValue("is_active", checked === true, {
+                          shouldTouch: true,
+                          shouldValidate: true,
+                        })
+                      }
+                    />
+                    Jadikan musim aktif
+                  </label>
+                  <DialogFooter>
+                    <Button
+                      type="submit"
+                      disabled={
+                        createSeasonMutation.isPending ||
+                        !form.formState.isValid
+                      }
+                    >
+                      {createSeasonMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Menyimpan...
+                        </>
+                      ) : (
+                        "Simpan"
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          ) : null}
         </CardHeader>
         <CardContent className="space-y-4">
           <form
-            className="flex flex-col gap-3 sm:flex-row sm:items-center"
+            className="flex flex-col gap-3 rounded-(--radius-md) border border-border/80 bg-muted/50 p-3 sm:flex-row sm:items-center"
             onSubmit={(event) => {
               event.preventDefault();
               setPage(1);
@@ -336,8 +347,8 @@ export default function SeasonsPage() {
             <Input
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Cari season..."
-              className="max-w-sm"
+              placeholder="Cari musim..."
+              className="max-w-sm bg-background"
             />
             <Button type="submit" variant="outline">
               Cari
@@ -361,7 +372,7 @@ export default function SeasonsPage() {
             </p>
           ) : null}
 
-          <div className="rounded-lg border border-border bg-surface">
+          <div className="overflow-hidden rounded-lg border border-border bg-background">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -383,7 +394,7 @@ export default function SeasonsPage() {
                 {seasonsQuery.isLoading ? (
                   <TableRow>
                     <TableCell colSpan={4}>
-                      <div className="flex items-center gap-2 text-sm text-muted">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Memuat season...
                       </div>
@@ -391,7 +402,10 @@ export default function SeasonsPage() {
                   </TableRow>
                 ) : table.getRowModel().rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-sm text-muted">
+                    <TableCell
+                      colSpan={4}
+                      className="text-sm text-muted-foreground"
+                    >
                       Belum ada data season.
                     </TableCell>
                   </TableRow>
@@ -413,8 +427,12 @@ export default function SeasonsPage() {
             </Table>
           </div>
 
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted">Halaman {page}</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <p>Halaman {page}</p>
+              <span className="text-border">•</span>
+              <p>Total {seasonsQuery.data?.pagination.total ?? 0} data</p>
+            </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"

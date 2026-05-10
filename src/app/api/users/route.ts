@@ -102,7 +102,7 @@ export const GET = RouteHandler(async (req) => {
     .where(whereClause)
     .get()) as { total: number } | undefined;
 
-  return ApiResponse.ok("User list fetched", {
+  return ApiResponse.ok("Daftar pengguna berhasil diambil", {
     items,
     pagination: {
       page,
@@ -150,7 +150,7 @@ export const POST = RouteHandler(async (req) => {
     throw error;
   }
 
-  return ApiResponse.created("User berhasil dibuat", {
+  return ApiResponse.created("Pengguna berhasil dibuat", {
     id: userId,
     name: parsed.data.name,
     email: parsed.data.email,

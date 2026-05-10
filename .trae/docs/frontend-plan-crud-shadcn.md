@@ -15,10 +15,15 @@ Target utamanya adalah membangun UI CRUD yang konsisten, role-aware (`admin`/`an
 ## 2. Prinsip Implementasi
 
 1. Gunakan komponen `shadcn/ui` terlebih dulu sebelum custom component.
-2. Semua warna harus menggunakan semantic token global (`--background`, `--surface`, `--overlay`, dst).
-3. Semua form ditargetkan migrasi ke `TanStack Form` + schema validator (Zod) untuk validasi inline dan type-safety.
-4. Semua list pakai pola tabel standar: filter, pagination, loading, empty state, error state.
-5. Semua aksi write (create/edit/delete) harus menghormati role akses dari backend.
+2. Prioritaskan Bahasa Indonesia untuk semua teks UI (judul, label, helper, validasi, pesan error/sukses) dan dokumentasi internal; gunakan bahasa lain hanya jika ada kebutuhan teknis.
+3. Semua warna harus menggunakan semantic token global utama (`--background`, `--foreground`, `--primary`, `--muted`, `--muted-foreground`, `--border`, `--ring`, `--accent`).
+4. Tone visual wajib warm, calm, minimal, dan productivity-focused dengan depth halus (`1px` border, shadow opacity <= `0.05`).
+5. Gunakan lebar konten konsisten sekitar `1200px` dan ritme section `--background`/`--muted`.
+6. Typography utama menggunakan `Poppins` (`--font-sans`, `--font-heading`) bobot `400/500/600/700`.
+7. Accessibility wajib: state hover/active/focus/disabled jelas dan focus ring `2px` via `--ring`.
+8. Semua form ditargetkan migrasi ke `TanStack Form` + schema validator (Zod) untuk validasi inline dan type-safety.
+9. Semua list pakai pola tabel standar: filter, pagination, loading, empty state, error state.
+10. Semua aksi write (create/edit/delete) harus menghormati role akses dari backend.
 
 ---
 
@@ -272,6 +277,13 @@ UI penting:
 
 ## 8. Rencana Implementasi Bertahap
 
+Status singkat implementasi saat ini:
+
+- `Done`: bootstrap auth login/logout, protected layout dasar, role-aware nav admin.
+- `Done`: perapihan visual awal untuk halaman `login`, `protected layout`, dan `seasons` berbasis token semantic.
+- `In Progress`: standardisasi pola CRUD lintas modul (`clubs`, `players`, dst) agar konsisten dengan shell terbaru.
+- `Planned`: migrasi form ke TanStack Form dan standardisasi data table reusable.
+
 ## Phase 1 - Foundation UI & Auth
 
 - rapikan `protected layout`, navbar, role-aware menu
@@ -283,6 +295,7 @@ Deliverable:
 
 - login/logout stabil
 - shell aplikasi konsisten
+- catatan progres: sudah tercapai untuk baseline, lanjut polishing konsistensi lintas halaman
 
 ## Phase 2 - Master Data CRUD
 
@@ -294,6 +307,7 @@ Deliverable:
 
 - admin bisa CRUD 3 entitas master
 - analyst read-only
+- catatan progres: `seasons` sudah aktif dengan pagination/search/create; `clubs` dan `players` tahap penyesuaian pola UI/UX
 
 ## Phase 3 - Relasi Domain CRUD
 

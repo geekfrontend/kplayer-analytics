@@ -82,7 +82,7 @@ async function validateMasterReferences(
     .limit(1)
     .get()) as { id: string } | undefined;
   if (!player) {
-    throw ApiError.badRequest("Player tidak ditemukan");
+    throw ApiError.badRequest("Pemain tidak ditemukan");
   }
 
   const season = (await orm
@@ -92,7 +92,7 @@ async function validateMasterReferences(
     .limit(1)
     .get()) as { id: string } | undefined;
   if (!season) {
-    throw ApiError.badRequest("Season tidak ditemukan");
+    throw ApiError.badRequest("Musim tidak ditemukan");
   }
 
   const club = (await orm
@@ -102,7 +102,7 @@ async function validateMasterReferences(
     .limit(1)
     .get()) as { id: string } | undefined;
   if (!club) {
-    throw ApiError.badRequest("Club tidak ditemukan");
+    throw ApiError.badRequest("Klub tidak ditemukan");
   }
 
   const seasonClub = (await orm
@@ -118,7 +118,7 @@ async function validateMasterReferences(
     .get()) as { id: string } | undefined;
   if (!seasonClub) {
     throw ApiError.badRequest(
-      "Club belum terdaftar pada season terkait di season-clubs",
+      "Klub belum terdaftar pada musim terkait di relasi musim-klub",
     );
   }
 }
@@ -139,7 +139,7 @@ async function validateAssignment(playerId: string, seasonId: string, clubId: st
 
   if (!assignment) {
     throw ApiError.badRequest(
-      "Stats hanya bisa dibuat jika assignment player-season-club valid",
+      "Statistik hanya bisa dibuat jika penugasan pemain-musim-klub valid",
     );
   }
 }
@@ -210,7 +210,7 @@ export const GET = RouteHandler(async (req) => {
     .where(whereClause)
     .get()) as { total: number } | undefined;
 
-  return ApiResponse.ok("Player stats fetched", {
+  return ApiResponse.ok("Statistik pemain berhasil diambil", {
     items,
     pagination: {
       page,
@@ -227,7 +227,7 @@ export const POST = RouteHandler(async (req) => {
 
   const parsed = createSchema.safeParse(await req.json());
   if (!parsed.success) {
-    throw ApiError.badRequest("Input stats tidak valid", parsed.error.issues);
+    throw ApiError.badRequest("Input statistik tidak valid", parsed.error.issues);
   }
 
   const payload = parsed.data;
@@ -262,7 +262,7 @@ export const POST = RouteHandler(async (req) => {
       .run();
   } catch (error) {
     if (getSqliteErrorCode(error) === "SQLITE_CONSTRAINT_UNIQUE") {
-      throw ApiError.conflict("Stat player untuk scope tersebut sudah ada");
+      throw ApiError.conflict("Statistik pemain untuk cakupan tersebut sudah ada");
     }
     throw error;
   }
@@ -293,5 +293,5 @@ export const POST = RouteHandler(async (req) => {
     .limit(1)
     .get() as PlayerStatsRow;
 
-  return ApiResponse.created("Player stats berhasil dibuat", { item });
+  return ApiResponse.created("Statistik pemain berhasil dibuat", { item });
 });

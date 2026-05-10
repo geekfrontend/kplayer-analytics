@@ -33,7 +33,7 @@ export const POST = RouteHandler(async (req) => {
 
   await createSession(user.id, accessToken, expiresAt);
 
-  return ApiResponse.ok("Login success", {
+  return ApiResponse.ok("Berhasil masuk", {
     access_token: accessToken,
     token_type: "Bearer",
     expires_in: expiresIn,

@@ -70,10 +70,10 @@ export const GET = RouteHandler(async (req, ctx) => {
     .get();
 
   if (!player) {
-    throw ApiError.notFound("Player tidak ditemukan");
+    throw ApiError.notFound("Pemain tidak ditemukan");
   }
 
-  return ApiResponse.ok("Player detail fetched", { player });
+  return ApiResponse.ok("Detail pemain berhasil diambil", { player });
 });
 
 export const PATCH = RouteHandler(async (req, ctx) => {
@@ -97,7 +97,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     .limit(1)
     .get() as { id: string } | undefined;
   if (!existing) {
-    throw ApiError.notFound("Player tidak ditemukan");
+    throw ApiError.notFound("Pemain tidak ditemukan");
   }
 
   const updates: {
@@ -140,7 +140,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     .limit(1)
     .get();
 
-  return ApiResponse.ok("Player berhasil diperbarui", { player });
+  return ApiResponse.ok("Pemain berhasil diperbarui", { player });
 });
 
 export const DELETE = RouteHandler(async (req, ctx) => {
@@ -150,8 +150,8 @@ export const DELETE = RouteHandler(async (req, ctx) => {
 
   const result = await orm.delete(players).where(eq(players.id, playerId)).run();
   if (result.changes < 1) {
-    throw ApiError.notFound("Player tidak ditemukan");
+    throw ApiError.notFound("Pemain tidak ditemukan");
   }
 
-  return ApiResponse.ok("Player berhasil dihapus");
+  return ApiResponse.ok("Pemain berhasil dihapus");
 });

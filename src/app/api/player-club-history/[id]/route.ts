@@ -62,7 +62,7 @@ async function validateMasterReferences(
     .limit(1)
     .get()) as { id: string } | undefined;
   if (!player) {
-    throw ApiError.badRequest("Player tidak ditemukan");
+    throw ApiError.badRequest("Pemain tidak ditemukan");
   }
 
   const season = (await orm
@@ -72,7 +72,7 @@ async function validateMasterReferences(
     .limit(1)
     .get()) as { id: string } | undefined;
   if (!season) {
-    throw ApiError.badRequest("Season tidak ditemukan");
+    throw ApiError.badRequest("Musim tidak ditemukan");
   }
 
   const club = (await orm
@@ -82,7 +82,7 @@ async function validateMasterReferences(
     .limit(1)
     .get()) as { id: string } | undefined;
   if (!club) {
-    throw ApiError.badRequest("Club tidak ditemukan");
+    throw ApiError.badRequest("Klub tidak ditemukan");
   }
 
   const seasonClub = (await orm
@@ -99,7 +99,7 @@ async function validateMasterReferences(
 
   if (!seasonClub) {
     throw ApiError.badRequest(
-      "Club belum terdaftar pada season terkait di season-clubs",
+      "Klub belum terdaftar pada musim terkait di relasi musim-klub",
     );
   }
 }
@@ -125,7 +125,7 @@ async function ensureNoActiveConflict(
 
   if (activeAssignment) {
     throw ApiError.conflict(
-      "Player sudah memiliki assignment aktif pada season tersebut",
+      "Pemain sudah memiliki penugasan aktif pada musim tersebut",
     );
   }
 }
@@ -167,7 +167,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     .get() as AssignmentRecord | undefined;
 
   if (!existing) {
-    throw ApiError.notFound("Assignment tidak ditemukan");
+    throw ApiError.notFound("Penugasan tidak ditemukan");
   }
 
   const nextState = {
@@ -237,7 +237,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     .limit(1)
     .get();
 
-  return ApiResponse.ok("Assignment berhasil diperbarui", { item });
+  return ApiResponse.ok("Penugasan berhasil diperbarui", { item });
 });
 
 export const DELETE = RouteHandler(async (req, ctx) => {
@@ -251,8 +251,8 @@ export const DELETE = RouteHandler(async (req, ctx) => {
     .run();
 
   if (result.changes < 1) {
-    throw ApiError.notFound("Assignment tidak ditemukan");
+    throw ApiError.notFound("Penugasan tidak ditemukan");
   }
 
-  return ApiResponse.ok("Assignment berhasil dihapus");
+  return ApiResponse.ok("Penugasan berhasil dihapus");
 });

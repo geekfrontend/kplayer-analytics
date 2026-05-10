@@ -75,10 +75,10 @@ export const GET = RouteHandler(async (req, ctx) => {
     .get();
 
   if (!season) {
-    throw ApiError.notFound("Season tidak ditemukan");
+    throw ApiError.notFound("Musim tidak ditemukan");
   }
 
-  return ApiResponse.ok("Season detail fetched", { season });
+  return ApiResponse.ok("Detail musim berhasil diambil", { season });
 });
 
 export const PATCH = RouteHandler(async (req, ctx) => {
@@ -98,7 +98,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     .limit(1)
     .get() as { id: string } | undefined;
   if (!existing) {
-    throw ApiError.notFound("Season tidak ditemukan");
+    throw ApiError.notFound("Musim tidak ditemukan");
   }
 
   const updates: {
@@ -128,7 +128,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     await orm.update(seasons).set(updates).where(eq(seasons.id, seasonId)).run();
   } catch (error) {
     if (getSqliteErrorCode(error) === "SQLITE_CONSTRAINT_UNIQUE") {
-      throw ApiError.conflict("Season sudah terdaftar");
+      throw ApiError.conflict("Musim sudah terdaftar");
     }
     throw error;
   }
@@ -148,7 +148,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     .limit(1)
     .get();
 
-  return ApiResponse.ok("Season berhasil diperbarui", { season });
+  return ApiResponse.ok("Musim berhasil diperbarui", { season });
 });
 
 export const DELETE = RouteHandler(async (req, ctx) => {
@@ -158,8 +158,8 @@ export const DELETE = RouteHandler(async (req, ctx) => {
 
   const result = await orm.delete(seasons).where(eq(seasons.id, seasonId)).run();
   if (result.changes < 1) {
-    throw ApiError.notFound("Season tidak ditemukan");
+    throw ApiError.notFound("Musim tidak ditemukan");
   }
 
-  return ApiResponse.ok("Season berhasil dihapus");
+  return ApiResponse.ok("Musim berhasil dihapus");
 });

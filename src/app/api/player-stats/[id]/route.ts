@@ -16,7 +16,7 @@ import {
 } from "@/db/schema";
 
 const paramsSchema = z.object({
-  id: z.uuid("Format id stats tidak valid"),
+  id: z.uuid("Format id statistik tidak valid"),
 });
 
 const updateSchema = z
@@ -67,7 +67,7 @@ async function validateAssignment(playerId: string, seasonId: string, clubId: st
 
   if (!assignment) {
     throw ApiError.badRequest(
-      "Stats hanya bisa diupdate jika assignment player-season-club valid",
+      "Statistik hanya bisa diperbarui jika penugasan pemain-musim-klub valid",
     );
   }
 }
@@ -133,10 +133,10 @@ export const GET = RouteHandler(async (req, ctx) => {
     .get();
 
   if (!item) {
-    throw ApiError.notFound("Player stats tidak ditemukan");
+    throw ApiError.notFound("Statistik pemain tidak ditemukan");
   }
 
-  return ApiResponse.ok("Player stats detail fetched", { item });
+  return ApiResponse.ok("Detail statistik pemain berhasil diambil", { item });
 });
 
 export const PATCH = RouteHandler(async (req, ctx) => {
@@ -146,12 +146,15 @@ export const PATCH = RouteHandler(async (req, ctx) => {
   const statsId = await parseStatsId(ctx.params);
   const parsed = updateSchema.safeParse(await req.json());
   if (!parsed.success) {
-    throw ApiError.badRequest("Input update stats tidak valid", parsed.error.issues);
+    throw ApiError.badRequest(
+      "Input pembaruan statistik tidak valid",
+      parsed.error.issues,
+    );
   }
 
   const existing = await getStatsById(statsId);
   if (!existing) {
-    throw ApiError.notFound("Player stats tidak ditemukan");
+    throw ApiError.notFound("Statistik pemain tidak ditemukan");
   }
 
   const nextState = {
@@ -204,7 +207,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
         .run();
     });
   } catch {
-    throw ApiError.server("Gagal memperbarui stats dan menyimpan history");
+    throw ApiError.server("Gagal memperbarui statistik dan menyimpan riwayat");
   }
 
   const item = await orm
@@ -233,5 +236,5 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     .limit(1)
     .get();
 
-  return ApiResponse.ok("Player stats berhasil diperbarui", { item });
+  return ApiResponse.ok("Statistik pemain berhasil diperbarui", { item });
 });

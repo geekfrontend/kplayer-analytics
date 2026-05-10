@@ -75,7 +75,7 @@ export const GET = RouteHandler(async (req) => {
     .where(whereClause)
     .get()) as { total: number } | undefined;
 
-  return ApiResponse.ok("Player list fetched", {
+  return ApiResponse.ok("Daftar pemain berhasil diambil", {
     items,
     pagination: {
       page,
@@ -113,7 +113,7 @@ export const POST = RouteHandler(async (req) => {
     })
     .run();
 
-  return ApiResponse.created("Player berhasil dibuat", {
+  return ApiResponse.created("Pemain berhasil dibuat", {
     id,
     ...parsed.data,
     created_at: now,

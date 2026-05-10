@@ -97,7 +97,7 @@ export const GET = RouteHandler(async (req) => {
     .where(whereClause)
     .get()) as { total: number } | undefined;
 
-  return ApiResponse.ok("Stats fetched", {
+  return ApiResponse.ok("Statistik berhasil diambil", {
     items,
     pagination: {
       page,

@@ -44,7 +44,7 @@ export const GET = RouteHandler(async (req) => {
     .get() as { id: string } | undefined;
 
   if (!season) {
-    throw ApiError.notFound("Season tidak ditemukan");
+    throw ApiError.notFound("Musim tidak ditemukan");
   }
 
   const totalPlayersResult = (await orm
@@ -81,7 +81,7 @@ export const GET = RouteHandler(async (req) => {
     .limit(1)
     .all() as TopAssistRow[];
 
-  return ApiResponse.ok("Dashboard summary fetched", {
+  return ApiResponse.ok("Ringkasan dasbor berhasil diambil", {
     season_id,
     total_players: totalPlayersResult?.total ?? 0,
     top_scorer: topScorer,

@@ -5,5 +5,5 @@ import { requireAuth } from "@/app/api/utils/auth";
 export const GET = RouteHandler(async (req) => {
   const user = await requireAuth(req);
 
-  return ApiResponse.ok("Current user fetched", { user });
+  return ApiResponse.ok("Data pengguna saat ini berhasil diambil", { user });
 });

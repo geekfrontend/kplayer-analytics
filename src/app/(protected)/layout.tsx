@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { AuthUserProvider } from "@/components/app/auth-user-context";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,10 @@ type NavItem = {
   href: string;
   label: string;
 };
+
+function getRoleLabel(role: AuthUser["role"]) {
+  return role === "admin" ? "Admin" : "Analis";
+}
 
 export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const router = useRouter();
@@ -74,17 +79,17 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
 
   const navItems = useMemo<NavItem[]>(() => {
     const items: NavItem[] = [
-      { href: "/", label: "Dashboard" },
-      { href: "/seasons", label: "Seasons" },
-      { href: "/clubs", label: "Clubs" },
-      { href: "/players", label: "Players" },
-      { href: "/season-clubs", label: "Season Clubs" },
-      { href: "/assignments", label: "Assignments" },
-      { href: "/player-stats", label: "Player Stats" },
+      { href: "/", label: "Dasbor" },
+      { href: "/seasons", label: "Musim" },
+      { href: "/clubs", label: "Klub" },
+      { href: "/players", label: "Pemain" },
+      { href: "/season-clubs", label: "Relasi Musim Klub" },
+      { href: "/assignments", label: "Penugasan" },
+      { href: "/player-stats", label: "Statistik Pemain" },
     ];
 
     if (user?.role === "admin") {
-      items.push({ href: "/users", label: "Users" });
+      items.push({ href: "/users", label: "Pengguna" });
     }
     return items;
   }, [user?.role]);
@@ -114,7 +119,7 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   if (isBootstrapping) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex items-center gap-3 text-sm text-muted">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>Memuat sesi login...</span>
         </div>
@@ -128,23 +133,25 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-30 border-b border-separator bg-surface/95 backdrop-blur supports-backdrop-filter:bg-surface/85">
-        <div className="mx-auto w-full max-w-6xl px-4">
-          <div className="flex h-16 items-center justify-between">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/95 shadow-[0_1px_2px_rgba(2,8,23,0.04),0_8px_24px_rgba(2,8,23,0.04)] backdrop-blur supports-backdrop-filter:bg-background/90">
+        <div className="mx-auto w-full max-w-300 px-4">
+          <div className="flex h-16 items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <span className="rounded-(--radius-md) bg-accent px-2.5 py-1 text-xs font-semibold text-accent-foreground">
+              <span className="rounded-(--radius-md) bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">
                 KPA
               </span>
               <div className="flex flex-col">
                 <span className="text-sm font-semibold leading-none">
                   KPlayer Analytics
                 </span>
-                <span className="text-xs text-muted">Admin Workspace</span>
+                <span className="text-xs text-muted-foreground">
+                  Ruang Kerja Analitik
+                </span>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="hidden text-sm text-muted md:block">
+              <span className="hidden text-sm text-muted-foreground md:block">
                 {user.email}
               </span>
               <DropdownMenu>
@@ -158,7 +165,9 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>{`${user.name} (${user.role})`}</DropdownMenuLabel>
+                  <DropdownMenuLabel>
+                    {`${user.name} (${getRoleLabel(user.role)})`}
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onSelect={(event) => {
@@ -166,14 +175,14 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
                       void handleLogout();
                     }}
                   >
-                    Logout
+                    Keluar
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </div>
 
-          <nav className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-3">
+          <nav className="no-scrollbar mb-3 flex items-center gap-2 overflow-x-auto rounded-(--radius-md) border border-border/80 bg-muted/50 p-1">
             {navItems.map((item) => {
               const isActive = isActiveNav(item.href);
               return (
@@ -182,8 +191,8 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
                   href={item.href}
                   className={
                     isActive
-                      ? "rounded-(--radius-md) border border-border bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground"
-                      : "rounded-(--radius-md) border border-transparent bg-transparent px-3 py-1.5 text-sm text-muted transition-colors hover:border-border hover:bg-surface hover:text-foreground"
+                      ? "rounded-(--radius-md) border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground shadow-[0_1px_2px_rgba(2,8,23,0.04)]"
+                      : "rounded-(--radius-md) border border-transparent bg-transparent px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground"
                   }
                 >
                   {item.label}
@@ -193,7 +202,9 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
           </nav>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl px-4 py-6">{children}</main>
+      <AuthUserProvider user={user}>
+        <main className="mx-auto w-full max-w-300 px-4 py-6">{children}</main>
+      </AuthUserProvider>
     </div>
   );
 }

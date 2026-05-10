@@ -54,7 +54,7 @@ export const GET = RouteHandler(async (req) => {
     .where(whereClause)
     .get()) as { total: number } | undefined;
 
-  return ApiResponse.ok("Player search fetched", {
+  return ApiResponse.ok("Hasil pencarian pemain berhasil diambil", {
     items,
     pagination: {
       page,

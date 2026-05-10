@@ -72,7 +72,7 @@ export const GET = RouteHandler(async (req, ctx) => {
     throw ApiError.notFound("User tidak ditemukan");
   }
 
-  return ApiResponse.ok("Detail user fetched", { user });
+  return ApiResponse.ok("Detail pengguna berhasil diambil", { user });
 });
 
 export const PATCH = RouteHandler(async (req, ctx) => {
@@ -142,7 +142,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     .limit(1)
     .get() as UserRow;
 
-  return ApiResponse.ok("User berhasil diperbarui", { user: updatedUser });
+  return ApiResponse.ok("Pengguna berhasil diperbarui", { user: updatedUser });
 });
 
 export const DELETE = RouteHandler(async (req, ctx) => {
@@ -178,5 +178,5 @@ export const DELETE = RouteHandler(async (req, ctx) => {
 
   await orm.delete(sessions).where(eq(sessions.user_id, userId)).run();
 
-  return ApiResponse.ok("User berhasil di-soft-delete");
+  return ApiResponse.ok("Pengguna berhasil dinonaktifkan");
 });

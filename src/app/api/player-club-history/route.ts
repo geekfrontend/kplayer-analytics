@@ -69,7 +69,7 @@ async function validateMasterReferences(
     .limit(1)
     .get()) as { id: string } | undefined;
   if (!player) {
-    throw ApiError.badRequest("Player tidak ditemukan");
+    throw ApiError.badRequest("Pemain tidak ditemukan");
   }
 
   const season = (await orm
@@ -79,7 +79,7 @@ async function validateMasterReferences(
     .limit(1)
     .get()) as { id: string } | undefined;
   if (!season) {
-    throw ApiError.badRequest("Season tidak ditemukan");
+    throw ApiError.badRequest("Musim tidak ditemukan");
   }
 
   const club = (await orm
@@ -89,7 +89,7 @@ async function validateMasterReferences(
     .limit(1)
     .get()) as { id: string } | undefined;
   if (!club) {
-    throw ApiError.badRequest("Club tidak ditemukan");
+    throw ApiError.badRequest("Klub tidak ditemukan");
   }
 
   const seasonClub = (await orm
@@ -106,7 +106,7 @@ async function validateMasterReferences(
 
   if (!seasonClub) {
     throw ApiError.badRequest(
-      "Club belum terdaftar pada season terkait di season-clubs",
+      "Klub belum terdaftar pada musim terkait di relasi musim-klub",
     );
   }
 }
@@ -127,7 +127,7 @@ async function ensureNoActiveConflict(playerId: string, seasonId: string) {
 
   if (activeAssignment) {
     throw ApiError.conflict(
-      "Player sudah memiliki assignment aktif pada season tersebut",
+      "Pemain sudah memiliki penugasan aktif pada musim tersebut",
     );
   }
 }
@@ -200,7 +200,7 @@ export const GET = RouteHandler(async (req) => {
     .where(whereClause)
     .get()) as { total: number } | undefined;
 
-  return ApiResponse.ok("Player club history fetched", {
+  return ApiResponse.ok("Riwayat klub pemain berhasil diambil", {
     items,
     pagination: {
       page,
@@ -273,5 +273,5 @@ export const POST = RouteHandler(async (req) => {
     .limit(1)
     .get() as AssignmentRow;
 
-  return ApiResponse.created("Assignment berhasil dibuat", { item });
+  return ApiResponse.created("Penugasan berhasil dibuat", { item });
 });

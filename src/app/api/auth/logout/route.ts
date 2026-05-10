@@ -6,5 +6,5 @@ export const POST = RouteHandler(async (req) => {
   const token = getBearerToken(req);
   await deleteSessionByToken(token);
 
-  return ApiResponse.ok("Logout success");
+  return ApiResponse.ok("Berhasil keluar");
 });

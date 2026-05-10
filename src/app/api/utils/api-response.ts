@@ -56,16 +56,16 @@ export class ApiResponse<T = unknown> {
     }).send();
   }
 
-  static ok<T>(message = "OK", data?: T) {
+  static ok<T>(message = "Berhasil", data?: T) {
     return ApiResponse.success(message, data, STATUS_CODES.OK);
   }
 
-  static created<T>(message = "Created", data?: T) {
+  static created<T>(message = "Berhasil dibuat", data?: T) {
     return ApiResponse.success(message, data, STATUS_CODES.CREATED);
   }
 
   static error(
-    message = "Error",
+    message = "Terjadi kesalahan",
     errors?: unknown,
     statusCode: StatusCode = STATUS_CODES.INTERNAL_SERVER_ERROR,
   ) {
@@ -84,6 +84,6 @@ import { ApiResponse } from "@/utils/api-response";
 export async function GET() {
   const data = { name: "Akkal" };
  
-  return ApiResponse.ok("Fetched successfully", data);
+  return ApiResponse.ok("Data berhasil diambil", data);
 }
 */

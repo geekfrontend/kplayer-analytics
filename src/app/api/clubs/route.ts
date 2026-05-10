@@ -68,7 +68,7 @@ export const GET = RouteHandler(async (req) => {
     .where(whereClause)
     .get()) as { total: number } | undefined;
 
-  return ApiResponse.ok("Club list fetched", {
+  return ApiResponse.ok("Daftar klub berhasil diambil", {
     items,
     pagination: {
       page,
@@ -103,12 +103,12 @@ export const POST = RouteHandler(async (req) => {
       .run();
   } catch (error) {
     if (getSqliteErrorCode(error) === "SQLITE_CONSTRAINT_UNIQUE") {
-      throw ApiError.conflict("Club sudah terdaftar");
+      throw ApiError.conflict("Klub sudah terdaftar");
     }
     throw error;
   }
 
-  return ApiResponse.created("Club berhasil dibuat", {
+  return ApiResponse.created("Klub berhasil dibuat", {
     id,
     name: parsed.data.name,
     country: parsed.data.country ?? null,

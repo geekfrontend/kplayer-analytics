@@ -22,27 +22,27 @@ export class ApiError extends Error {
     }
   }
 
-  static badRequest(message = "Bad Request", errors?: unknown) {
+  static badRequest(message = "Permintaan tidak valid", errors?: unknown) {
     return new ApiError(STATUS_CODES.BAD_REQUEST, message, errors);
   }
 
-  static unauthorized(message = "Unauthorized") {
+  static unauthorized(message = "Tidak terautentikasi") {
     return new ApiError(STATUS_CODES.UNAUTHORIZED, message);
   }
 
-  static forbidden(message = "Forbidden") {
+  static forbidden(message = "Akses ditolak") {
     return new ApiError(STATUS_CODES.FORBIDDEN, message);
   }
 
-  static notFound(message = "Not Found") {
+  static notFound(message = "Data tidak ditemukan") {
     return new ApiError(STATUS_CODES.NOT_FOUND, message);
   }
 
-  static conflict(message = "Conflict") {
+  static conflict(message = "Konflik data") {
     return new ApiError(STATUS_CODES.CONFLICT, message);
   }
 
-  static server(message = "Internal Server Error") {
+  static server(message = "Terjadi kesalahan pada server") {
     return new ApiError(STATUS_CODES.INTERNAL_SERVER_ERROR, message);
   }
 }
