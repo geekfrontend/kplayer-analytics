@@ -1,8 +1,8 @@
-- Always check HeroUI components first for any required elements before creating custom ones.
+- Always check shadcn/ui components first for any required elements before creating custom ones.
 - Use global semantic tokens: `--background`, `--foreground`, `--surface`, `--overlay`, `--muted`, `--accent`, `--danger`, `--warning`, `--success`; avoid hardcoded colors.
 - Light/dark mode must stay consistent through `.light/.dark` classes or `data-theme`; do not create separate palettes per page.
 - Non-overlay components (Card, Section) should use `surface`; overlay components (Dropdown, Popover, Modal) should use `overlay`.
 - Forms must follow field tokens: `--field-background`, `--field-foreground`, `--field-placeholder`, `--field-border`, `--field-shadow`.
 - Use `--radius` for standard radius; use `--field-radius` for fields; use `--border` and `--separator` for borders/separators.
 - Accessible focus states must be visible using `--focus` + ring offset, and disabled states must follow `--disabled-opacity`.
-- Prioritize HeroUI variants (`primary`, `secondary`, `outline`, `ghost`, `danger`) before adding custom classes.
+- Prioritize shadcn variants (`default`, `secondary`, `outline`, `ghost`, `destructive`) before adding custom classes.

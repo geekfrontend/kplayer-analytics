@@ -1,171 +1,189 @@
 @import "tailwindcss";
-@import "@heroui/styles";
+/* @import "tw-animate-css"; */
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.129 0.042 264.695);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.129 0.042 264.695);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.129 0.042 264.695);
+  --primary: oklch(0.208 0.042 265.755);
+  --primary-foreground: oklch(0.984 0.003 247.858);
+  --secondary: oklch(0.968 0.007 247.896);
+  --secondary-foreground: oklch(0.208 0.042 265.755);
+  --muted: oklch(0.968 0.007 247.896);
+  --muted-foreground: oklch(0.554 0.046 257.417);
+  --accent: oklch(0.968 0.007 247.896);
+  --accent-foreground: oklch(0.208 0.042 265.755);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.929 0.013 255.508);
+  --input: oklch(0.929 0.013 255.508);
+  --ring: oklch(0.704 0.04 256.788);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+.dark {
+  --background: oklch(0.129 0.042 264.695);
+  --foreground: oklch(0.984 0.003 247.858);
+  --card: oklch(0.14 0.04 259.21);
+  --card-foreground: oklch(0.984 0.003 247.858);
+  --popover: oklch(0.208 0.042 265.755);
+  --popover-foreground: oklch(0.984 0.003 247.858);
+  --primary: oklch(0.929 0.013 255.508);
+  --primary-foreground: oklch(0.208 0.042 265.755);
+  --secondary: oklch(0.279 0.041 260.031);
+  --secondary-foreground: oklch(0.984 0.003 247.858);
+  --muted: oklch(0.279 0.041 260.031);
+  --muted-foreground: oklch(0.704 0.04 256.788);
+  --accent: oklch(0.279 0.041 260.031);
+  --accent-foreground: oklch(0.984 0.003 247.858);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.551 0.027 264.364);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+}
+
+@theme inline {
+  --font-inter: "Inter", "sans-serif";
+  --font-manrope: "Manrope", "sans-serif";
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@custom-variant dark (&:is(.dark *));
 
 @layer base {
-  /* HeroUI Default Theme */
-  :root,
-  .light,
-  .default,
-  [data-theme="light"],
-  [data-theme="default"] {
-    color-scheme: light;
-
-    /* == Common Variables == */
-
-    /* Primitive Colors (Do not change between light and dark) */
-    --white: oklch(100% 0 0);
-    --black: oklch(0% 0 0);
-    --snow: oklch(0.9911 0 0);
-    --eclipse: oklch(0.2103 0.0059 285.89);
-
-    /* Spacing scale */
-    --spacing: 0.25rem;
-
-    /* Border */
-    --border-width: 1px;
-    --field-border-width: 0px;
-    --disabled-opacity: 0.5;
-
-    /* Ring offset - Used for focus ring */
-    --ring-offset-width: 2px;
-
-    /* Cursor */
-    --cursor-interactive: pointer;
-    --cursor-disabled: not-allowed;
-
-    /* Radius */
-    --radius: 0.5rem;
-    --field-radius: calc(var(--radius) * 1.5);
-
-    /* == Light Theme Variables == */
-
-    /* Base Colors */
-    --background: oklch(0.9702 0 0);
-    --foreground: var(--eclipse);
-
-    /* Surface: Used for non-overlay components (cards, accordions, disclosure groups) */
-    --surface: var(--white);
-    --surface-foreground: var(--foreground);
-
-    --surface-secondary: oklch(0.9524 0.0013 286.37);
-    --surface-secondary-foreground: var(--foreground);
-
-    --surface-tertiary: oklch(0.9373 0.0013 286.37);
-    --surface-tertiary-foreground: var(--foreground);
-
-    /* Overlay: Used for floating/overlay components (tooltips, popovers, modals, menus) */
-    --overlay: var(--white);
-    --overlay-foreground: var(--foreground);
-
-    --muted: oklch(0.5517 0.0138 285.94);
-
-    --scrollbar: oklch(87.1% 0.006 286.286);
-
-    --default: oklch(94% 0.001 286.375);
-    --default-foreground: var(--eclipse);
-
-    --accent: oklch(0.6204 0.195 253.83);
-    --accent-foreground: var(--snow);
-
-    /* Form Fields */
-    --field-background: var(--white);
-    --field-foreground: oklch(0.2103 0.0059 285.89);
-    --field-placeholder: var(--muted);
-    --field-border: transparent; /* no border by default on form fields */
-
-    /* Status Colors */
-    --success: oklch(0.7329 0.1935 150.81);
-    --success-foreground: var(--eclipse);
-
-    --warning: oklch(0.7819 0.1585 72.33);
-    --warning-foreground: var(--eclipse);
-
-    --danger: oklch(0.6532 0.2328 25.74);
-    --danger-foreground: var(--snow);
-
-    /* Component Colors */
-    --segment: var(--white);
-    --segment-foreground: var(--eclipse);
-
-    /* Misc Colors */
-    --border: oklch(90% 0.004 286.32);
-    --separator: oklch(92% 0.004 286.32);
-    --focus: var(--accent);
-    --link: var(--foreground);
-
-    /* Backdrop */
-    --backdrop: rgba(0, 0, 0, 0.5);
-
-    /* Shadows */
-    /* --surface-shadow: 0 0px 0px 0 rgba(24, 24, 27, 0.03), 0 2px 10px 0 rgba(24, 24, 27, 0.08); */
-    --surface-shadow:
-      0 2px 4px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.06),
-      0 0 1px 0 rgba(0, 0, 0, 0.06);
-    /* Overlay shadow */
-    --overlay-shadow:
-      0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 -6px 12px 0 rgba(0, 0, 0, 0.03),
-      0 14px 28px 0 rgba(0, 0, 0, 0.08);
-    --field-shadow:
-      0 2px 4px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.06),
-      0 0 1px 0 rgba(0, 0, 0, 0.06);
-    /* Skeleton Default Global Animation */
-    --skeleton-animation: shimmer; /* shimmer, pulse, none */
+  * {
+    @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  html {
+    @apply overflow-x-hidden;
+  }
+  body {
+    @apply min-h-svh w-full bg-background text-foreground has-[div[data-variant='inset']]:bg-sidebar;
   }
 
-  .dark,
-  [data-theme="dark"] {
-    color-scheme: dark;
-    /* == Dark Theme Variables == */
+  /* Override Radix scroll locking for sticky headers */
+  body[data-scroll-locked] {
+    overflow: unset !important;
+  }
 
-    /* Base Colors */
-    --background: oklch(12% 0.005 285.823);
-    --foreground: var(--snow);
+  /* Cursor pointer for buttons */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 
-    /* Surface: Used for non-overlay components (cards, accordions, disclosure groups) */
-    --surface: oklch(0.2103 0.0059 285.89);
-    --surface-foreground: var(--foreground);
+  /* Prevent focus zoom on mobile devices */
+  @media screen and (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+}
 
-    --surface-secondary: oklch(0.257 0.0037 286.14);
-    --surface-tertiary: oklch(0.2721 0.0024 247.91);
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+}
 
-    /* Overlay: Used for floating/overlay components (tooltips, popovers, modals, menus) - lighter for contrast */
-    --overlay: oklch(0.2103 0.0059 285.89);
-    --overlay-foreground: var(--foreground);
+@utility no-scrollbar {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
 
-    --muted: oklch(70.5% 0.015 286.067);
+@utility faded-bottom {
+  @apply after:pointer-events-none after:absolute after:inset-s-0 after:bottom-0 after:hidden after:h-32 after:w-full after:rounded-b-2xl after:bg-[linear-gradient(180deg,transparent_10%,var(--background)_70%)] md:after:block;
+}
 
-    --scrollbar: oklch(70.5% 0.015 286.067);
+/* styles.css */
+.CollapsibleContent {
+  overflow: hidden;
+}
+.CollapsibleContent[data-state="open"] {
+  animation: slideDown 300ms ease-out;
+}
+.CollapsibleContent[data-state="closed"] {
+  animation: slideUp 300ms ease-out;
+}
 
-    --default: oklch(27.4% 0.006 286.033);
-    --default-foreground: var(--snow);
+@keyframes slideDown {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+  }
+}
 
-    /* Form Fields */
-    --field-background: oklch(0.2103 0.0059 285.89);
-    --field-foreground: var(--foreground);
-
-    /* Status Colors */
-    --warning: oklch(0.8203 0.1388 76.34);
-    --warning-foreground: var(--eclipse);
-
-    --danger: oklch(0.594 0.1967 24.63);
-    --danger-foreground: var(--snow);
-
-    /* Component Colors */
-    --segment: oklch(0.3964 0.01 285.93);
-    --segment-foreground: var(--foreground);
-
-    /* Misc Colors */
-    --border: oklch(28% 0.006 286.033);
-    --separator: oklch(25% 0.006 286.033);
-    --focus: var(--accent);
-    --link: var(--foreground);
-
-    /* Backdrop */
-    --backdrop: rgba(0, 0, 0, 0.6);
-
-    /* Shadows */
-    --surface-shadow: 0 0 0 0 transparent inset; /* No shadow on dark mode */
-    --overlay-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.3) inset;
-    --field-shadow: 0 0 0 0 transparent inset; /* Transparent shadow to allow ring utilities to work */
+@keyframes slideUp {
+  from {
+    height: var(--radix-collapsible-content-height);
+  }
+  to {
+    height: 0;
   }
 }

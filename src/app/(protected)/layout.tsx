@@ -1,10 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Key } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Avatar, Button, Dropdown, Header, Spinner } from "@heroui/react";
+import { Loader2 } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   type AuthUser,
   clearAccessToken,
@@ -15,6 +24,11 @@ import {
 
 type ProtectedLayoutProps = {
   children: React.ReactNode;
+};
+
+type NavItem = {
+  href: string;
+  label: string;
 };
 
 export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
@@ -58,8 +72,17 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
     };
   }, [router]);
 
-  const navItems = useMemo(() => {
-    const items = [{ href: "/", label: "Dashboard" }];
+  const navItems = useMemo<NavItem[]>(() => {
+    const items: NavItem[] = [
+      { href: "/", label: "Dashboard" },
+      { href: "/seasons", label: "Seasons" },
+      { href: "/clubs", label: "Clubs" },
+      { href: "/players", label: "Players" },
+      { href: "/season-clubs", label: "Season Clubs" },
+      { href: "/assignments", label: "Assignments" },
+      { href: "/player-stats", label: "Player Stats" },
+    ];
+
     if (user?.role === "admin") {
       items.push({ href: "/users", label: "Users" });
     }
@@ -80,17 +103,19 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
     }
   }
 
-  function handleDropdownAction(key: Key) {
-    if (key === "logout") {
-      void handleLogout();
+  function isActiveNav(href: string) {
+    if (href === "/") {
+      return pathname === "/";
     }
+
+    return pathname === href || pathname.startsWith(`${href}/`);
   }
 
   if (isBootstrapping) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex items-center gap-3 text-sm text-muted">
-          <Spinner size="sm" />
+          <Loader2 className="h-4 w-4 animate-spin" />
           <span>Memuat sesi login...</span>
         </div>
       </main>
@@ -103,51 +128,71 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Header className="border-b border-separator bg-surface">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4">
-          <div className="flex items-center gap-8">
-            <span className="text-sm font-semibold">KPlayer Analytics</span>
-            <nav className="flex items-center gap-3 text-sm">
-              {navItems.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={
-                      isActive ? "font-semibold text-foreground" : "text-muted"
-                    }
+      <header className="sticky top-0 z-30 border-b border-separator bg-surface/95 backdrop-blur supports-backdrop-filter:bg-surface/85">
+        <div className="mx-auto w-full max-w-6xl px-4">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="rounded-(--radius-md) bg-accent px-2.5 py-1 text-xs font-semibold text-accent-foreground">
+                KPA
+              </span>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold leading-none">
+                  KPlayer Analytics
+                </span>
+                <span className="text-xs text-muted">Admin Workspace</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="hidden text-sm text-muted md:block">
+                {user.email}
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" disabled={isLoggingOut}>
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>
+                        {user.name.slice(0, 1).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>{`${user.name} (${user.role})`}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      void handleLogout();
+                    }}
                   >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-muted md:block">
-              {user.email}
-            </span>
-            <Dropdown>
-              <Dropdown.Trigger>
-                <Button variant="ghost" isDisabled={isLoggingOut}>
-                  <Avatar size="sm">
-                    <Avatar.Fallback>
-                      {user.name.slice(0, 1).toUpperCase()}
-                    </Avatar.Fallback>
-                  </Avatar>
-                </Button>
-              </Dropdown.Trigger>
-              <Dropdown.Popover>
-                <Dropdown.Menu onAction={handleDropdownAction}>
-                  <Dropdown.Item id="identity">{`${user.name} (${user.role})`}</Dropdown.Item>
-                  <Dropdown.Item id="logout">Logout</Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown.Popover>
-            </Dropdown>
-          </div>
+
+          <nav className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-3">
+            {navItems.map((item) => {
+              const isActive = isActiveNav(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={
+                    isActive
+                      ? "rounded-(--radius-md) border border-border bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground"
+                      : "rounded-(--radius-md) border border-transparent bg-transparent px-3 py-1.5 text-sm text-muted transition-colors hover:border-border hover:bg-surface hover:text-foreground"
+                  }
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
-      </Header>
+      </header>
       <main className="mx-auto w-full max-w-6xl px-4 py-6">{children}</main>
     </div>
   );

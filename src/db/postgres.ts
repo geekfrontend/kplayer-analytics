@@ -41,7 +41,10 @@ function installQueryCompatMethods() {
   const prototypes = [selectProto, insertProto, updateProto, deleteProto];
 
   for (const proto of prototypes) {
-    if (!proto || (proto as { __drizzleCompatInstalled?: boolean }).__drizzleCompatInstalled) {
+    if (
+      !proto ||
+      (proto as { __drizzleCompatInstalled?: boolean }).__drizzleCompatInstalled
+    ) {
       continue;
     }
 

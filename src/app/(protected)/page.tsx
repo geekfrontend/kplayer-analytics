@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, Spinner } from "@heroui/react";
+import { Loader2 } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { type AuthUser, me, toUserFacingError } from "@/lib/auth";
 
 export default function DashboardPage() {
@@ -38,14 +45,16 @@ export default function DashboardPage() {
   return (
     <section className="space-y-4">
       <Card>
-        <Card.Header>
-          <Card.Title>Dashboard</Card.Title>
-          <Card.Description>Ringkasan cepat fase awal KPlayer Analytics.</Card.Description>
-        </Card.Header>
-        <Card.Content className="space-y-3 text-sm">
+        <CardHeader>
+          <CardTitle>Dashboard</CardTitle>
+          <CardDescription>
+            Ringkasan cepat fase awal KPlayer Analytics.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
           {isLoading ? (
             <div className="flex items-center gap-2 text-muted">
-              <Spinner size="sm" />
+              <Loader2 className="h-4 w-4 animate-spin" />
               <span>Mengambil profil pengguna...</span>
             </div>
           ) : null}
@@ -65,7 +74,7 @@ export default function DashboardPage() {
               </p>
             </div>
           ) : null}
-        </Card.Content>
+        </CardContent>
       </Card>
     </section>
   );
