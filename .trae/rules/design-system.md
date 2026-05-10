@@ -1,8 +1,7 @@
-- Always check shadcn/ui components first for any required elements before creating custom ones.
-- Use global semantic tokens: `--background`, `--foreground`, `--surface`, `--overlay`, `--muted`, `--accent`, `--danger`, `--warning`, `--success`; avoid hardcoded colors.
-- Light/dark mode must stay consistent through `.light/.dark` classes or `data-theme`; do not create separate palettes per page.
-- Non-overlay components (Card, Section) should use `surface`; overlay components (Dropdown, Popover, Modal) should use `overlay`.
-- Forms must follow field tokens: `--field-background`, `--field-foreground`, `--field-placeholder`, `--field-border`, `--field-shadow`.
-- Use `--radius` for standard radius; use `--field-radius` for fields; use `--border` and `--separator` for borders/separators.
-- Accessible focus states must be visible using `--focus` + ring offset, and disabled states must follow `--disabled-opacity`.
-- Prioritize shadcn variants (`default`, `secondary`, `outline`, `ghost`, `destructive`) before adding custom classes.
+- Always check `@/components/ui/*` first for any required elements before creating custom ones.
+- Use tokens from `app/globals.css`: `--background`, `--foreground`, `--primary`, `--muted`, `--muted-foreground`, `--border`, `--ring`, `--accent`.
+- Visual tone must be warm, calm, minimal, and productivity-focused; avoid cold grays.
+- Typography uses `Poppins` (`--font-sans`, `--font-heading`) in weights `400/500/600/700`.
+- Keep subtle depth: `1px` borders and soft multi-layer shadows (each layer opacity <= `0.05`).
+- Preserve generous whitespace, ~`1200px` max content width, and alternating `--background` / `--muted` sections.
+- Accessibility is required: clear hover/active/focus/disabled states and a visible `2px` focus ring via `--ring`.
