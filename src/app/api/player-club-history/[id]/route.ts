@@ -55,37 +55,34 @@ async function validateMasterReferences(
   seasonId: string,
   clubId: string,
 ) {
-  const player = (await orm
+  const [player] = await orm
     .select({ id: players.id })
     .from(players)
     .where(eq(players.id, playerId))
-    .limit(1)
-    .get()) as { id: string } | undefined;
+    .limit(1);
   if (!player) {
     throw ApiError.badRequest("Pemain tidak ditemukan");
   }
 
-  const season = (await orm
+  const [season] = await orm
     .select({ id: seasons.id })
     .from(seasons)
     .where(eq(seasons.id, seasonId))
-    .limit(1)
-    .get()) as { id: string } | undefined;
+    .limit(1);
   if (!season) {
     throw ApiError.badRequest("Musim tidak ditemukan");
   }
 
-  const club = (await orm
+  const [club] = await orm
     .select({ id: clubs.id })
     .from(clubs)
     .where(eq(clubs.id, clubId))
-    .limit(1)
-    .get()) as { id: string } | undefined;
+    .limit(1);
   if (!club) {
     throw ApiError.badRequest("Klub tidak ditemukan");
   }
 
-  const seasonClub = (await orm
+  const [seasonClub] = await orm
     .select({ id: season_clubs.id })
     .from(season_clubs)
     .where(
@@ -94,8 +91,7 @@ async function validateMasterReferences(
         eq(season_clubs.club_id, clubId),
       ),
     )
-    .limit(1)
-    .get()) as { id: string } | undefined;
+    .limit(1);
 
   if (!seasonClub) {
     throw ApiError.badRequest(
@@ -109,7 +105,7 @@ async function ensureNoActiveConflict(
   playerId: string,
   seasonId: string,
 ) {
-  const activeAssignment = (await orm
+  const [activeAssignment] = await orm
     .select({ id: player_club_history.id })
     .from(player_club_history)
     .where(
@@ -120,8 +116,7 @@ async function ensureNoActiveConflict(
         ne(player_club_history.id, assignmentId),
       ),
     )
-    .limit(1)
-    .get()) as { id: string } | undefined;
+    .limit(1);
 
   if (activeAssignment) {
     throw ApiError.conflict(
@@ -149,7 +144,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     throw ApiError.badRequest("Input assignment tidak valid", parsed.error.issues);
   }
 
-  const existing = await orm
+  const [existing] = await orm
     .select({
       id: player_club_history.id,
       player_id: player_club_history.player_id,
@@ -163,8 +158,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     })
     .from(player_club_history)
     .where(eq(player_club_history.id, assignmentId))
-    .limit(1)
-    .get() as AssignmentRecord | undefined;
+    .limit(1) as AssignmentRecord[];
 
   if (!existing) {
     throw ApiError.notFound("Penugasan tidak ditemukan");
@@ -211,10 +205,9 @@ export const PATCH = RouteHandler(async (req, ctx) => {
       is_active: nextState.is_active ? 1 : 0,
       updated_at: nowIsoString(),
     })
-    .where(eq(player_club_history.id, assignmentId))
-    .run();
+    .where(eq(player_club_history.id, assignmentId));
 
-  const item = await orm
+  const [item] = await orm
     .select({
       id: player_club_history.id,
       player_id: player_club_history.player_id,
@@ -234,8 +227,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     .innerJoin(seasons, eq(player_club_history.season_id, seasons.id))
     .innerJoin(clubs, eq(player_club_history.club_id, clubs.id))
     .where(eq(player_club_history.id, assignmentId))
-    .limit(1)
-    .get();
+    .limit(1);
 
   return ApiResponse.ok("Penugasan berhasil diperbarui", { item });
 });
@@ -247,10 +239,9 @@ export const DELETE = RouteHandler(async (req, ctx) => {
   const assignmentId = await parseAssignmentId(ctx.params);
   const result = await orm
     .delete(player_club_history)
-    .where(eq(player_club_history.id, assignmentId))
-    .run();
+    .where(eq(player_club_history.id, assignmentId));
 
-  if (result.changes < 1) {
+  if ((result.rowCount ?? 0) < 1) {
     throw ApiError.notFound("Penugasan tidak ditemukan");
   }
 

@@ -45,14 +45,12 @@ export const GET = RouteHandler(async (req) => {
     .where(whereClause)
     .orderBy(asc(players.full_name))
     .limit(limit)
-    .offset(offset)
-    .all();
+    .offset(offset);
 
-  const countResult = (await orm
+  const [countResult] = await orm
     .select({ total: count() })
     .from(players)
-    .where(whereClause)
-    .get()) as { total: number } | undefined;
+    .where(whereClause);
 
   return ApiResponse.ok("Hasil pencarian pemain berhasil diambil", {
     items,

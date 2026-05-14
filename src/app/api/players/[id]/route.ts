@@ -54,7 +54,7 @@ export const GET = RouteHandler(async (req, ctx) => {
   await requireAuth(req);
   const playerId = await parsePlayerId(ctx.params);
 
-  const player = await orm
+  const [player] = await orm
     .select({
       id: players.id,
       full_name: players.full_name,
@@ -66,8 +66,7 @@ export const GET = RouteHandler(async (req, ctx) => {
     })
     .from(players)
     .where(eq(players.id, playerId))
-    .limit(1)
-    .get();
+    .limit(1);
 
   if (!player) {
     throw ApiError.notFound("Pemain tidak ditemukan");
@@ -90,12 +89,12 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     validateDateOfBirth(parsed.data.date_of_birth);
   }
 
-  const existing = await orm
+  const [existing] = await orm
     .select({ id: players.id })
     .from(players)
     .where(eq(players.id, playerId))
-    .limit(1)
-    .get() as { id: string } | undefined;
+    .limit(1);
+
   if (!existing) {
     throw ApiError.notFound("Pemain tidak ditemukan");
   }
@@ -123,9 +122,9 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     updates.primary_position = parsed.data.primary_position;
   }
 
-  await orm.update(players).set(updates).where(eq(players.id, playerId)).run();
+  await orm.update(players).set(updates).where(eq(players.id, playerId));
 
-  const player = await orm
+  const [player] = await orm
     .select({
       id: players.id,
       full_name: players.full_name,
@@ -137,8 +136,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     })
     .from(players)
     .where(eq(players.id, playerId))
-    .limit(1)
-    .get();
+    .limit(1);
 
   return ApiResponse.ok("Pemain berhasil diperbarui", { player });
 });
@@ -148,8 +146,8 @@ export const DELETE = RouteHandler(async (req, ctx) => {
   requireRole(user, ["admin"]);
   const playerId = await parsePlayerId(ctx.params);
 
-  const result = await orm.delete(players).where(eq(players.id, playerId)).run();
-  if (result.changes < 1) {
+  const result = await orm.delete(players).where(eq(players.id, playerId));
+  if ((result.rowCount ?? 0) < 1) {
     throw ApiError.notFound("Pemain tidak ditemukan");
   }
 

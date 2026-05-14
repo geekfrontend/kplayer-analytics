@@ -9,6 +9,7 @@ import {
   requireRole,
   UserRole,
 } from "@/app/api/utils/auth";
+import { getDbErrorCode, PG_UNIQUE_VIOLATION } from "@/app/api/utils/db-error";
 import { RouteHandler } from "@/app/api/utils/route-handler";
 import { orm, nowIsoString } from "@/db/postgres";
 import { users } from "@/db/schema";
@@ -41,14 +42,6 @@ type ListUserRow = {
   created_at: string;
   updated_at: string;
 };
-
-function getSqliteErrorCode(error: unknown) {
-  if (!error || typeof error !== "object") {
-    return null;
-  }
-  const candidate = error as { code?: unknown };
-  return typeof candidate.code === "string" ? candidate.code : null;
-}
 
 export const GET = RouteHandler(async (req) => {
   const currentUser = await requireAuth(req);
@@ -93,14 +86,12 @@ export const GET = RouteHandler(async (req) => {
     .where(whereClause)
     .orderBy(desc(users.created_at))
     .limit(limit)
-    .offset(offset)
-    .all() as ListUserRow[];
+    .offset(offset) as ListUserRow[];
 
-  const countRow = (await orm
+  const [countRow] = await orm
     .select({ total: count() })
     .from(users)
-    .where(whereClause)
-    .get()) as { total: number } | undefined;
+    .where(whereClause);
 
   return ApiResponse.ok("Daftar pengguna berhasil diambil", {
     items,
@@ -131,7 +122,7 @@ export const POST = RouteHandler(async (req) => {
   const passwordHash = hashPassword(parsed.data.password);
 
   try {
-    orm
+    await orm
       .insert(users)
       .values({
         id: userId,
@@ -141,10 +132,9 @@ export const POST = RouteHandler(async (req) => {
         role: parsed.data.role,
         created_at: now,
         updated_at: now,
-      })
-      .run();
+      });
   } catch (error) {
-    if (getSqliteErrorCode(error) === "SQLITE_CONSTRAINT_UNIQUE") {
+    if (getDbErrorCode(error) === PG_UNIQUE_VIOLATION) {
       throw ApiError.conflict("Email sudah terdaftar");
     }
     throw error;

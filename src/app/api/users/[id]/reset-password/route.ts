@@ -43,28 +43,26 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     );
   }
 
-  const existingUser = await orm
+  const [existingUser] = await orm
     .select({ id: users.id })
     .from(users)
     .where(eq(users.id, userId))
-    .limit(1)
-    .get() as { id: string } | undefined;
+    .limit(1);
 
   if (!existingUser) {
     throw ApiError.notFound("User tidak ditemukan");
   }
 
   const passwordHash = hashPassword(parsedBody.data.new_password);
-  orm
+  await orm
     .update(users)
     .set({
       password_hash: passwordHash,
       updated_at: nowIsoString(),
     })
-    .where(eq(users.id, userId))
-    .run();
+    .where(eq(users.id, userId));
 
-  await orm.delete(sessions).where(eq(sessions.user_id, userId)).run();
+  await orm.delete(sessions).where(eq(sessions.user_id, userId));
 
   return ApiResponse.ok("Kata sandi pengguna berhasil diatur ulang");
 });

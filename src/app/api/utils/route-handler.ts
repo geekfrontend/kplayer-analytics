@@ -12,8 +12,10 @@ type RouteHandlerFn = (
   ctx: HandlerContext,
 ) => Promise<Response> | Response;
 
+type ErrorWithStatus = Error & { status?: number; statusCode?: number; errors?: unknown };
+
 function getHttpStatusFromError(error: Error): number | null {
-  const candidate = error as Error & { status?: unknown; statusCode?: unknown };
+  const candidate = error as ErrorWithStatus;
 
   if (typeof candidate.statusCode === "number") {
     return candidate.statusCode;
@@ -54,7 +56,7 @@ export function RouteHandler(fn: RouteHandlerFn) {
           status = errorStatus;
         }
 
-        const candidate = error as Error & { errors?: unknown };
+        const candidate = error as ErrorWithStatus;
         if (candidate.errors !== undefined) {
           errors = candidate.errors;
         }

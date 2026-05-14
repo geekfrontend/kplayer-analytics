@@ -24,9 +24,9 @@ export const DELETE = RouteHandler(async (req, ctx) => {
   requireRole(user, ["admin"]);
 
   const id = await parseSeasonClubId(ctx.params);
-  const result = await orm.delete(season_clubs).where(eq(season_clubs.id, id)).run();
+  const result = await orm.delete(season_clubs).where(eq(season_clubs.id, id));
 
-  if (result.changes < 1) {
+  if ((result.rowCount ?? 0) < 1) {
     throw ApiError.notFound("Relasi musim-klub tidak ditemukan");
   }
 

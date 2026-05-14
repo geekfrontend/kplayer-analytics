@@ -54,13 +54,14 @@ export const GET = RouteHandler(async (req) => {
   const whereClause =
     whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
-  const orderByColumn = {
+  const sortColumns = {
     updated_at: player_stats.updated_at,
     goals: player_stats.goals,
     assists: player_stats.assists,
     minutes_played: player_stats.minutes_played,
-  }[sort_by];
+  } as const;
 
+  const orderByColumn = sortColumns[sort_by];
   const orderByExpr = sort_order === "asc" ? asc(orderByColumn) : desc(orderByColumn);
 
   const items = await orm
@@ -88,14 +89,12 @@ export const GET = RouteHandler(async (req) => {
     .where(whereClause)
     .orderBy(orderByExpr)
     .limit(limit)
-    .offset(offset)
-    .all();
+    .offset(offset);
 
-  const countResult = (await orm
+  const [countResult] = await orm
     .select({ total: count() })
     .from(player_stats)
-    .where(whereClause)
-    .get()) as { total: number } | undefined;
+    .where(whereClause);
 
   return ApiResponse.ok("Statistik berhasil diambil", {
     items,

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
+import { getDbErrorCode, PG_UNIQUE_VIOLATION } from "@/app/api/utils/db-error";
 import { RouteHandler } from "@/app/api/utils/route-handler";
 import { nowIsoString, orm } from "@/db/postgres";
 import { clubs } from "@/db/schema";
@@ -20,14 +21,6 @@ const updateClubSchema = z
     message: "Minimal 1 field harus diisi",
   });
 
-function getSqliteErrorCode(error: unknown) {
-  if (!error || typeof error !== "object") {
-    return null;
-  }
-  const candidate = error as { code?: unknown };
-  return typeof candidate.code === "string" ? candidate.code : null;
-}
-
 async function parseClubId(params: Promise<Record<string, string>>) {
   const parsed = paramsSchema.safeParse(await params);
   if (!parsed.success) {
@@ -40,7 +33,7 @@ export const GET = RouteHandler(async (req, ctx) => {
   await requireAuth(req);
   const clubId = await parseClubId(ctx.params);
 
-  const club = await orm
+  const [club] = await orm
     .select({
       id: clubs.id,
       name: clubs.name,
@@ -50,8 +43,7 @@ export const GET = RouteHandler(async (req, ctx) => {
     })
     .from(clubs)
     .where(eq(clubs.id, clubId))
-    .limit(1)
-    .get();
+    .limit(1);
 
   if (!club) {
     throw ApiError.notFound("Klub tidak ditemukan");
@@ -70,12 +62,12 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     throw ApiError.badRequest("Input club tidak valid", parsed.error.issues);
   }
 
-  const existing = await orm
+  const [existing] = await orm
     .select({ id: clubs.id })
     .from(clubs)
     .where(eq(clubs.id, clubId))
-    .limit(1)
-    .get() as { id: string } | undefined;
+    .limit(1);
+
   if (!existing) {
     throw ApiError.notFound("Klub tidak ditemukan");
   }
@@ -96,15 +88,15 @@ export const PATCH = RouteHandler(async (req, ctx) => {
   }
 
   try {
-    await orm.update(clubs).set(updates).where(eq(clubs.id, clubId)).run();
+    await orm.update(clubs).set(updates).where(eq(clubs.id, clubId));
   } catch (error) {
-    if (getSqliteErrorCode(error) === "SQLITE_CONSTRAINT_UNIQUE") {
+    if (getDbErrorCode(error) === PG_UNIQUE_VIOLATION) {
       throw ApiError.conflict("Klub sudah terdaftar");
     }
     throw error;
   }
 
-  const club = await orm
+  const [club] = await orm
     .select({
       id: clubs.id,
       name: clubs.name,
@@ -114,8 +106,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     })
     .from(clubs)
     .where(eq(clubs.id, clubId))
-    .limit(1)
-    .get();
+    .limit(1);
 
   return ApiResponse.ok("Klub berhasil diperbarui", { club });
 });
@@ -125,8 +116,8 @@ export const DELETE = RouteHandler(async (req, ctx) => {
   requireRole(user, ["admin"]);
   const clubId = await parseClubId(ctx.params);
 
-  const result = await orm.delete(clubs).where(eq(clubs.id, clubId)).run();
-  if (result.changes < 1) {
+  const result = await orm.delete(clubs).where(eq(clubs.id, clubId));
+  if ((result.rowCount ?? 0) < 1) {
     throw ApiError.notFound("Klub tidak ditemukan");
   }
 

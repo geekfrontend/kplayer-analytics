@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
+import { getDbErrorCode, PG_UNIQUE_VIOLATION } from "@/app/api/utils/db-error";
 import { RouteHandler } from "@/app/api/utils/route-handler";
 import { nowIsoString, orm } from "@/db/postgres";
 import { seasons } from "@/db/schema";
@@ -39,14 +40,6 @@ const updateSeasonSchema = z
     },
   );
 
-function getSqliteErrorCode(error: unknown) {
-  if (!error || typeof error !== "object") {
-    return null;
-  }
-  const candidate = error as { code?: unknown };
-  return typeof candidate.code === "string" ? candidate.code : null;
-}
-
 async function parseSeasonId(params: Promise<Record<string, string>>) {
   const parsed = paramsSchema.safeParse(await params);
   if (!parsed.success) {
@@ -59,7 +52,7 @@ export const GET = RouteHandler(async (req, ctx) => {
   await requireAuth(req);
   const seasonId = await parseSeasonId(ctx.params);
 
-  const season = await orm
+  const [season] = await orm
     .select({
       id: seasons.id,
       name: seasons.name,
@@ -71,8 +64,7 @@ export const GET = RouteHandler(async (req, ctx) => {
     })
     .from(seasons)
     .where(eq(seasons.id, seasonId))
-    .limit(1)
-    .get();
+    .limit(1);
 
   if (!season) {
     throw ApiError.notFound("Musim tidak ditemukan");
@@ -91,12 +83,12 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     throw ApiError.badRequest("Input season tidak valid", parsed.error.issues);
   }
 
-  const existing = await orm
+  const [existing] = await orm
     .select({ id: seasons.id })
     .from(seasons)
     .where(eq(seasons.id, seasonId))
-    .limit(1)
-    .get() as { id: string } | undefined;
+    .limit(1);
+
   if (!existing) {
     throw ApiError.notFound("Musim tidak ditemukan");
   }
@@ -125,15 +117,15 @@ export const PATCH = RouteHandler(async (req, ctx) => {
   }
 
   try {
-    await orm.update(seasons).set(updates).where(eq(seasons.id, seasonId)).run();
+    await orm.update(seasons).set(updates).where(eq(seasons.id, seasonId));
   } catch (error) {
-    if (getSqliteErrorCode(error) === "SQLITE_CONSTRAINT_UNIQUE") {
+    if (getDbErrorCode(error) === PG_UNIQUE_VIOLATION) {
       throw ApiError.conflict("Musim sudah terdaftar");
     }
     throw error;
   }
 
-  const season = await orm
+  const [season] = await orm
     .select({
       id: seasons.id,
       name: seasons.name,
@@ -145,8 +137,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     })
     .from(seasons)
     .where(eq(seasons.id, seasonId))
-    .limit(1)
-    .get();
+    .limit(1);
 
   return ApiResponse.ok("Musim berhasil diperbarui", { season });
 });
@@ -156,8 +147,8 @@ export const DELETE = RouteHandler(async (req, ctx) => {
   requireRole(user, ["admin"]);
   const seasonId = await parseSeasonId(ctx.params);
 
-  const result = await orm.delete(seasons).where(eq(seasons.id, seasonId)).run();
-  if (result.changes < 1) {
+  const result = await orm.delete(seasons).where(eq(seasons.id, seasonId));
+  if ((result.rowCount ?? 0) < 1) {
     throw ApiError.notFound("Musim tidak ditemukan");
   }
 

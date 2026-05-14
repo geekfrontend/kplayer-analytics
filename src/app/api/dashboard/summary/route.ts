@@ -11,18 +11,6 @@ const querySchema = z.object({
   season_id: z.uuid("Format season_id tidak valid"),
 });
 
-type TopScorerRow = {
-  player_id: string;
-  full_name: string;
-  goals: number;
-};
-
-type TopAssistRow = {
-  player_id: string;
-  full_name: string;
-  assists: number;
-};
-
 export const GET = RouteHandler(async (req) => {
   await requireAuth(req);
 
@@ -36,22 +24,20 @@ export const GET = RouteHandler(async (req) => {
 
   const { season_id } = parsedQuery.data;
 
-  const season = await orm
+  const [season] = await orm
     .select({ id: seasons.id })
     .from(seasons)
     .where(eq(seasons.id, season_id))
-    .limit(1)
-    .get() as { id: string } | undefined;
+    .limit(1);
 
   if (!season) {
     throw ApiError.notFound("Musim tidak ditemukan");
   }
 
-  const totalPlayersResult = (await orm
+  const [totalPlayersResult] = await orm
     .select({ total: sql<number>`COUNT(DISTINCT ${player_stats.player_id})` })
     .from(player_stats)
-    .where(eq(player_stats.season_id, season_id))
-    .get()) as { total: number } | undefined;
+    .where(eq(player_stats.season_id, season_id));
 
   const topScorer = await orm
     .select({
@@ -64,8 +50,7 @@ export const GET = RouteHandler(async (req) => {
     .where(eq(player_stats.season_id, season_id))
     .groupBy(player_stats.player_id, players.full_name)
     .orderBy(desc(sql`SUM(${player_stats.goals})`), asc(players.full_name))
-    .limit(1)
-    .all() as TopScorerRow[];
+    .limit(1);
 
   const topAssist = await orm
     .select({
@@ -78,8 +63,7 @@ export const GET = RouteHandler(async (req) => {
     .where(eq(player_stats.season_id, season_id))
     .groupBy(player_stats.player_id, players.full_name)
     .orderBy(desc(sql`SUM(${player_stats.assists})`), asc(players.full_name))
-    .limit(1)
-    .all() as TopAssistRow[];
+    .limit(1);
 
   return ApiResponse.ok("Ringkasan dasbor berhasil diambil", {
     season_id,

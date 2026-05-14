@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
+import { getDbErrorCode, PG_UNIQUE_VIOLATION } from "@/app/api/utils/db-error";
 import { RouteHandler } from "@/app/api/utils/route-handler";
 import { nowIsoString, orm } from "@/db/postgres";
 import { clubs } from "@/db/schema";
@@ -18,14 +19,6 @@ const createClubSchema = z.object({
   name: z.string().trim().min(2, "Nama klub minimal 2 karakter"),
   country: z.string().trim().min(2, "Negara minimal 2 karakter").optional(),
 });
-
-function getSqliteErrorCode(error: unknown) {
-  if (!error || typeof error !== "object") {
-    return null;
-  }
-  const candidate = error as { code?: unknown };
-  return typeof candidate.code === "string" ? candidate.code : null;
-}
 
 export const GET = RouteHandler(async (req) => {
   await requireAuth(req);
@@ -59,14 +52,12 @@ export const GET = RouteHandler(async (req) => {
     .where(whereClause)
     .orderBy(desc(clubs.created_at))
     .limit(limit)
-    .offset(offset)
-    .all();
+    .offset(offset);
 
-  const countResult = (await orm
+  const [countResult] = await orm
     .select({ total: count() })
     .from(clubs)
-    .where(whereClause)
-    .get()) as { total: number } | undefined;
+    .where(whereClause);
 
   return ApiResponse.ok("Daftar klub berhasil diambil", {
     items,
@@ -91,7 +82,7 @@ export const POST = RouteHandler(async (req) => {
   const id = randomUUID();
   const now = nowIsoString();
   try {
-    orm
+    await orm
       .insert(clubs)
       .values({
         id,
@@ -99,10 +90,9 @@ export const POST = RouteHandler(async (req) => {
         country: parsed.data.country ?? null,
         created_at: now,
         updated_at: now,
-      })
-      .run();
+      });
   } catch (error) {
-    if (getSqliteErrorCode(error) === "SQLITE_CONSTRAINT_UNIQUE") {
+    if (getDbErrorCode(error) === PG_UNIQUE_VIOLATION) {
       throw ApiError.conflict("Klub sudah terdaftar");
     }
     throw error;

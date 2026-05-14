@@ -16,15 +16,6 @@ const querySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
-type HistoryRow = {
-  id: string;
-  player_stats_id: string;
-  before_payload: string;
-  after_payload: string;
-  changed_by: string;
-  changed_at: string;
-};
-
 async function parseStatsId(params: Promise<Record<string, string>>) {
   const parsed = paramsSchema.safeParse(await params);
   if (!parsed.success) {
@@ -33,7 +24,7 @@ async function parseStatsId(params: Promise<Record<string, string>>) {
   return parsed.data.id;
 }
 
-function parseJsonPayload(payload: string) {
+function parseJsonPayload(payload: string): unknown {
   try {
     return JSON.parse(payload);
   } catch {
@@ -54,12 +45,11 @@ export const GET = RouteHandler(async (req, ctx) => {
     throw ApiError.badRequest("Query tidak valid", parsedQuery.error.issues);
   }
 
-  const stats = (await orm
+  const [stats] = await orm
     .select({ id: player_stats.id })
     .from(player_stats)
     .where(eq(player_stats.id, statsId))
-    .limit(1)
-    .get()) as { id: string } | undefined;
+    .limit(1);
 
   if (!stats) {
     throw ApiError.notFound("Statistik pemain tidak ditemukan");
@@ -68,7 +58,7 @@ export const GET = RouteHandler(async (req, ctx) => {
   const { page, limit } = parsedQuery.data;
   const offset = (page - 1) * limit;
 
-  const historyItems = (await orm
+  const historyItems = await orm
     .select({
       id: player_stats_history.id,
       player_stats_id: player_stats_history.player_stats_id,
@@ -81,14 +71,12 @@ export const GET = RouteHandler(async (req, ctx) => {
     .where(eq(player_stats_history.player_stats_id, statsId))
     .orderBy(desc(player_stats_history.changed_at))
     .limit(limit)
-    .offset(offset)
-    .all()) as HistoryRow[];
+    .offset(offset);
 
-  const countResult = (await orm
+  const [countResult] = await orm
     .select({ total: count() })
     .from(player_stats_history)
-    .where(and(eq(player_stats_history.player_stats_id, statsId)))
-    .get()) as { total: number } | undefined;
+    .where(and(eq(player_stats_history.player_stats_id, statsId)));
 
   return ApiResponse.ok("Riwayat statistik pemain berhasil diambil", {
     items: historyItems.map((item) => ({

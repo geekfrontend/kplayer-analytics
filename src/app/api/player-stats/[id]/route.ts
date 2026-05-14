@@ -52,7 +52,7 @@ function validateStatsDomain(goals: number, shots: number) {
 }
 
 async function validateAssignment(playerId: string, seasonId: string, clubId: string) {
-  const assignment = (await orm
+  const [assignment] = await orm
     .select({ id: player_club_history.id })
     .from(player_club_history)
     .where(
@@ -62,8 +62,7 @@ async function validateAssignment(playerId: string, seasonId: string, clubId: st
         eq(player_club_history.club_id, clubId),
       ),
     )
-    .limit(1)
-    .get()) as { id: string } | undefined;
+    .limit(1);
 
   if (!assignment) {
     throw ApiError.badRequest(
@@ -80,8 +79,8 @@ async function parseStatsId(params: Promise<Record<string, string>>) {
   return parsed.data.id;
 }
 
-async function getStatsById(id: string) {
-  return (await orm
+async function getStatsById(id: string): Promise<PlayerStatsRecord | undefined> {
+  const [result] = await orm
     .select({
       id: player_stats.id,
       player_id: player_stats.player_id,
@@ -98,15 +97,16 @@ async function getStatsById(id: string) {
     })
     .from(player_stats)
     .where(eq(player_stats.id, id))
-    .limit(1)
-    .get()) as PlayerStatsRecord | undefined;
+    .limit(1);
+
+  return result as PlayerStatsRecord | undefined;
 }
 
 export const GET = RouteHandler(async (req, ctx) => {
   await requireAuth(req);
 
   const statsId = await parseStatsId(ctx.params);
-  const item = await orm
+  const [item] = await orm
     .select({
       id: player_stats.id,
       player_id: player_stats.player_id,
@@ -129,8 +129,7 @@ export const GET = RouteHandler(async (req, ctx) => {
     .innerJoin(seasons, eq(player_stats.season_id, seasons.id))
     .innerJoin(clubs, eq(player_stats.club_id, clubs.id))
     .where(eq(player_stats.id, statsId))
-    .limit(1)
-    .get();
+    .limit(1);
 
   if (!item) {
     throw ApiError.notFound("Statistik pemain tidak ditemukan");
@@ -170,7 +169,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
   const now = nowIsoString();
 
   try {
-    await orm.transaction(async (tx: typeof orm) => {
+    await orm.transaction(async (tx) => {
       await tx
         .update(player_stats)
         .set({
@@ -181,8 +180,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
           updated_at: now,
           updated_by: user.id,
         })
-        .where(eq(player_stats.id, statsId))
-        .run();
+        .where(eq(player_stats.id, statsId));
 
       await tx
         .insert(player_stats_history)
@@ -203,14 +201,13 @@ export const PATCH = RouteHandler(async (req, ctx) => {
           }),
           changed_by: user.id,
           changed_at: now,
-        })
-        .run();
+        });
     });
   } catch {
     throw ApiError.server("Gagal memperbarui statistik dan menyimpan riwayat");
   }
 
-  const item = await orm
+  const [item] = await orm
     .select({
       id: player_stats.id,
       player_id: player_stats.player_id,
@@ -233,8 +230,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     .innerJoin(seasons, eq(player_stats.season_id, seasons.id))
     .innerJoin(clubs, eq(player_stats.club_id, clubs.id))
     .where(eq(player_stats.id, statsId))
-    .limit(1)
-    .get();
+    .limit(1);
 
   return ApiResponse.ok("Statistik pemain berhasil diperbarui", { item });
 });

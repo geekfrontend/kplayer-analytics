@@ -46,8 +46,8 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await orm.delete(sessions).run();
-  await orm.delete(users).run();
+  await orm.delete(sessions);
+  await orm.delete(users);
 
   const now = nowIsoString();
   await orm
@@ -73,8 +73,7 @@ beforeEach(async () => {
         updated_at: now,
         deleted_at: null,
       },
-    ])
-    .run();
+    ]);
 });
 
 async function loginAndGetToken(email: string, password: string) {
@@ -171,8 +170,7 @@ describe("Auth + User Management Integration", () => {
         created_at: now,
         updated_at: now,
         deleted_at: null,
-      })
-      .run();
+      });
 
     const deleteRequest = new NextRequest(
       `http://localhost/api/users/${createdUserId}`,

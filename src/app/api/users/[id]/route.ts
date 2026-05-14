@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole, UserRole } from "@/app/api/utils/auth";
+import { getDbErrorCode, PG_UNIQUE_VIOLATION } from "@/app/api/utils/db-error";
 import { RouteHandler } from "@/app/api/utils/route-handler";
 import { orm, nowIsoString } from "@/db/postgres";
 import { sessions, users } from "@/db/schema";
@@ -33,14 +34,6 @@ type UserRow = {
   updated_at: string;
 };
 
-function getSqliteErrorCode(error: unknown) {
-  if (!error || typeof error !== "object") {
-    return null;
-  }
-  const candidate = error as { code?: unknown };
-  return typeof candidate.code === "string" ? candidate.code : null;
-}
-
 async function parseUserId(paramsPromise: Promise<Record<string, string>>) {
   const parsed = paramsSchema.safeParse(await paramsPromise);
   if (!parsed.success) {
@@ -54,7 +47,7 @@ export const GET = RouteHandler(async (req, ctx) => {
   requireRole(currentUser, ["admin"]);
 
   const userId = await parseUserId(ctx.params);
-  const user = await orm
+  const [user] = await orm
     .select({
       id: users.id,
       name: users.name,
@@ -65,8 +58,7 @@ export const GET = RouteHandler(async (req, ctx) => {
     })
     .from(users)
     .where(and(eq(users.id, userId), isNull(users.deleted_at)))
-    .limit(1)
-    .get() as UserRow | undefined;
+    .limit(1) as UserRow[];
 
   if (!user) {
     throw ApiError.notFound("User tidak ditemukan");
@@ -89,12 +81,11 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     );
   }
 
-  const existingUser = await orm
+  const [existingUser] = await orm
     .select({ id: users.id })
     .from(users)
     .where(and(eq(users.id, userId), isNull(users.deleted_at)))
-    .limit(1)
-    .get() as { id: string } | undefined;
+    .limit(1);
 
   if (!existingUser) {
     throw ApiError.notFound("User tidak ditemukan");
@@ -120,15 +111,15 @@ export const PATCH = RouteHandler(async (req, ctx) => {
   }
 
   try {
-    await orm.update(users).set(updates).where(eq(users.id, userId)).run();
+    await orm.update(users).set(updates).where(eq(users.id, userId));
   } catch (error) {
-    if (getSqliteErrorCode(error) === "SQLITE_CONSTRAINT_UNIQUE") {
+    if (getDbErrorCode(error) === PG_UNIQUE_VIOLATION) {
       throw ApiError.conflict("Email sudah terdaftar");
     }
     throw error;
   }
 
-  const updatedUser = await orm
+  const [updatedUser] = await orm
     .select({
       id: users.id,
       name: users.name,
@@ -139,8 +130,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     })
     .from(users)
     .where(and(eq(users.id, userId), isNull(users.deleted_at)))
-    .limit(1)
-    .get() as UserRow;
+    .limit(1) as UserRow[];
 
   return ApiResponse.ok("Pengguna berhasil diperbarui", { user: updatedUser });
 });
@@ -151,12 +141,11 @@ export const DELETE = RouteHandler(async (req, ctx) => {
 
   const userId = await parseUserId(ctx.params);
 
-  const existingUser = await orm
+  const [existingUser] = await orm
     .select({ id: users.id })
     .from(users)
     .where(and(eq(users.id, userId), isNull(users.deleted_at)))
-    .limit(1)
-    .get() as { id: string } | undefined;
+    .limit(1);
 
   if (!existingUser) {
     throw ApiError.notFound("User tidak ditemukan");
@@ -167,16 +156,15 @@ export const DELETE = RouteHandler(async (req, ctx) => {
   }
 
   const now = nowIsoString();
-  orm
+  await orm
     .update(users)
     .set({
       deleted_at: now,
       updated_at: now,
     })
-    .where(eq(users.id, userId))
-    .run();
+    .where(eq(users.id, userId));
 
-  await orm.delete(sessions).where(eq(sessions.user_id, userId)).run();
+  await orm.delete(sessions).where(eq(sessions.user_id, userId));
 
   return ApiResponse.ok("Pengguna berhasil dinonaktifkan");
 });

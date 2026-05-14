@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
+import { getDbErrorCode, PG_UNIQUE_VIOLATION } from "@/app/api/utils/db-error";
 import { RouteHandler } from "@/app/api/utils/route-handler";
 import { nowIsoString, orm } from "@/db/postgres";
 import { clubs, season_clubs, seasons } from "@/db/schema";
@@ -20,41 +21,22 @@ const createSeasonClubSchema = z.object({
   club_id: z.uuid("Format club_id tidak valid"),
 });
 
-type SeasonClubRow = {
-  id: string;
-  season_id: string;
-  season_name: string;
-  club_id: string;
-  club_name: string;
-  created_at: string;
-};
-
-function getSqliteErrorCode(error: unknown) {
-  if (!error || typeof error !== "object") {
-    return null;
-  }
-  const candidate = error as { code?: unknown };
-  return typeof candidate.code === "string" ? candidate.code : null;
-}
-
 async function validateForeignKeys(seasonId: string, clubId: string) {
-  const season = (await orm
+  const [season] = await orm
     .select({ id: seasons.id })
     .from(seasons)
     .where(eq(seasons.id, seasonId))
-    .limit(1)
-    .get()) as { id: string } | undefined;
+    .limit(1);
 
   if (!season) {
     throw ApiError.badRequest("Musim tidak ditemukan");
   }
 
-  const club = (await orm
+  const [club] = await orm
     .select({ id: clubs.id })
     .from(clubs)
     .where(eq(clubs.id, clubId))
-    .limit(1)
-    .get()) as { id: string } | undefined;
+    .limit(1);
 
   if (!club) {
     throw ApiError.badRequest("Klub tidak ditemukan");
@@ -105,14 +87,12 @@ export const GET = RouteHandler(async (req) => {
     .where(whereClause)
     .orderBy(desc(season_clubs.created_at))
     .limit(limit)
-    .offset(offset)
-    .all() as SeasonClubRow[];
+    .offset(offset);
 
-  const countResult = (await orm
+  const [countResult] = await orm
     .select({ total: count() })
     .from(season_clubs)
-    .where(whereClause)
-    .get()) as { total: number } | undefined;
+    .where(whereClause);
 
   return ApiResponse.ok("Daftar relasi musim-klub berhasil diambil", {
     items,
@@ -150,16 +130,15 @@ export const POST = RouteHandler(async (req) => {
         season_id: parsed.data.season_id,
         club_id: parsed.data.club_id,
         created_at: createdAt,
-      })
-      .run();
+      });
   } catch (error) {
-    if (getSqliteErrorCode(error) === "SQLITE_CONSTRAINT_UNIQUE") {
+    if (getDbErrorCode(error) === PG_UNIQUE_VIOLATION) {
       throw ApiError.conflict("Relasi musim dan klub sudah terdaftar");
     }
     throw error;
   }
 
-  const item = await orm
+  const [item] = await orm
     .select({
       id: season_clubs.id,
       season_id: season_clubs.season_id,
@@ -172,8 +151,7 @@ export const POST = RouteHandler(async (req) => {
     .innerJoin(seasons, eq(season_clubs.season_id, seasons.id))
     .innerJoin(clubs, eq(season_clubs.club_id, clubs.id))
     .where(eq(season_clubs.id, id))
-    .limit(1)
-    .get() as SeasonClubRow;
+    .limit(1);
 
   return ApiResponse.created("Relasi musim-klub berhasil dibuat", { item });
 });

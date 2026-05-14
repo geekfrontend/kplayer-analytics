@@ -100,16 +100,15 @@ export function createSession(
       token,
       expires_at: expiresAt,
       created_at: new Date().toISOString(),
-    })
-    .run();
+    });
 }
 
 export function deleteSessionByToken(token: string) {
-  return orm.delete(sessions).where(eq(sessions.token, token)).run();
+  return orm.delete(sessions).where(eq(sessions.token, token));
 }
 
 export async function findUserByEmail(email: string) {
-  const result = (await orm
+  const results = await orm
     .select({
       id: users.id,
       name: users.name,
@@ -119,21 +118,16 @@ export async function findUserByEmail(email: string) {
     })
     .from(users)
     .where(and(eq(users.email, email), isNull(users.deleted_at)))
-    .limit(1)
-    .get()) as
-    | (UserRow & {
-        password_hash: string;
-      })
-    | undefined;
+    .limit(1);
 
-  return result;
+  return results[0] as (UserRow & { password_hash: string }) | undefined;
 }
 
 export async function requireAuth(req: NextRequest): Promise<UserRow> {
   const token = getBearerToken(req);
   const payload = verifyAccessToken(token);
 
-  const sessionUser = (await orm
+  const results = await orm
     .select({
       id: users.id,
       name: users.name,
@@ -144,8 +138,9 @@ export async function requireAuth(req: NextRequest): Promise<UserRow> {
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.user_id))
     .where(and(eq(sessions.token, token), isNull(users.deleted_at)))
-    .limit(1)
-    .get()) as SessionUserRow | undefined;
+    .limit(1);
+
+  const sessionUser = results[0] as SessionUserRow | undefined;
 
   if (!sessionUser) {
     throw ApiError.unauthorized("Session tidak ditemukan");

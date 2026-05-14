@@ -36,21 +36,6 @@ const createSchema = z.object({
   is_active: z.boolean().optional().default(true),
 });
 
-type AssignmentRow = {
-  id: string;
-  player_id: string;
-  player_name: string;
-  season_id: string;
-  season_name: string;
-  club_id: string;
-  club_name: string;
-  join_date: string;
-  leave_date: string | null;
-  is_active: number;
-  created_at: string;
-  updated_at: string;
-};
-
 function validateDateOrder(joinDate: string, leaveDate?: string) {
   if (leaveDate && leaveDate < joinDate) {
     throw ApiError.badRequest("leave_date harus lebih besar atau sama join_date");
@@ -62,37 +47,34 @@ async function validateMasterReferences(
   seasonId: string,
   clubId: string,
 ) {
-  const player = (await orm
+  const [player] = await orm
     .select({ id: players.id })
     .from(players)
     .where(eq(players.id, playerId))
-    .limit(1)
-    .get()) as { id: string } | undefined;
+    .limit(1);
   if (!player) {
     throw ApiError.badRequest("Pemain tidak ditemukan");
   }
 
-  const season = (await orm
+  const [season] = await orm
     .select({ id: seasons.id })
     .from(seasons)
     .where(eq(seasons.id, seasonId))
-    .limit(1)
-    .get()) as { id: string } | undefined;
+    .limit(1);
   if (!season) {
     throw ApiError.badRequest("Musim tidak ditemukan");
   }
 
-  const club = (await orm
+  const [club] = await orm
     .select({ id: clubs.id })
     .from(clubs)
     .where(eq(clubs.id, clubId))
-    .limit(1)
-    .get()) as { id: string } | undefined;
+    .limit(1);
   if (!club) {
     throw ApiError.badRequest("Klub tidak ditemukan");
   }
 
-  const seasonClub = (await orm
+  const [seasonClub] = await orm
     .select({ id: season_clubs.id })
     .from(season_clubs)
     .where(
@@ -101,8 +83,7 @@ async function validateMasterReferences(
         eq(season_clubs.club_id, clubId),
       ),
     )
-    .limit(1)
-    .get()) as { id: string } | undefined;
+    .limit(1);
 
   if (!seasonClub) {
     throw ApiError.badRequest(
@@ -112,7 +93,7 @@ async function validateMasterReferences(
 }
 
 async function ensureNoActiveConflict(playerId: string, seasonId: string) {
-  const activeAssignment = (await orm
+  const [activeAssignment] = await orm
     .select({ id: player_club_history.id })
     .from(player_club_history)
     .where(
@@ -122,8 +103,7 @@ async function ensureNoActiveConflict(playerId: string, seasonId: string) {
         eq(player_club_history.is_active, 1),
       ),
     )
-    .limit(1)
-    .get()) as { id: string } | undefined;
+    .limit(1);
 
   if (activeAssignment) {
     throw ApiError.conflict(
@@ -191,14 +171,12 @@ export const GET = RouteHandler(async (req) => {
     .where(whereClause)
     .orderBy(desc(player_club_history.created_at))
     .limit(limit)
-    .offset(offset)
-    .all() as AssignmentRow[];
+    .offset(offset);
 
-  const countResult = (await orm
+  const [countResult] = await orm
     .select({ total: count() })
     .from(player_club_history)
-    .where(whereClause)
-    .get()) as { total: number } | undefined;
+    .where(whereClause);
 
   return ApiResponse.ok("Riwayat klub pemain berhasil diambil", {
     items,
@@ -247,10 +225,9 @@ export const POST = RouteHandler(async (req) => {
       is_active: payload.is_active ? 1 : 0,
       created_at: now,
       updated_at: now,
-    })
-    .run();
+    });
 
-  const item = await orm
+  const [item] = await orm
     .select({
       id: player_club_history.id,
       player_id: player_club_history.player_id,
@@ -270,8 +247,7 @@ export const POST = RouteHandler(async (req) => {
     .innerJoin(seasons, eq(player_club_history.season_id, seasons.id))
     .innerJoin(clubs, eq(player_club_history.club_id, clubs.id))
     .where(eq(player_club_history.id, id))
-    .limit(1)
-    .get() as AssignmentRow;
+    .limit(1);
 
   return ApiResponse.created("Penugasan berhasil dibuat", { item });
 });
