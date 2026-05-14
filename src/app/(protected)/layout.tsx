@@ -157,6 +157,7 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
       { href: "/", label: "Dasbor" },
       { href: "/clubs", label: "Klub" },
       { href: "/players", label: "Pemain" },
+      { href: "/analytics", label: "Analisis" },
     ];
 
     if (user?.role === "admin") {
