@@ -9,6 +9,7 @@ import { player_stats, players, seasons } from "@/db/schema";
 
 const querySchema = z.object({
   season_id: z.uuid("Format season_id tidak valid"),
+  club_id: z.uuid("Format club_id tidak valid").optional(),
 });
 
 export const GET = RouteHandler(async (req) => {
@@ -16,13 +17,14 @@ export const GET = RouteHandler(async (req) => {
 
   const parsedQuery = querySchema.safeParse({
     season_id: req.nextUrl.searchParams.get("season_id") ?? undefined,
+    club_id: req.nextUrl.searchParams.get("club_id") ?? undefined,
   });
 
   if (!parsedQuery.success) {
     throw ApiError.badRequest("Query tidak valid", parsedQuery.error.issues);
   }
 
-  const { season_id } = parsedQuery.data;
+  const { season_id, club_id } = parsedQuery.data;
 
   const [season] = await orm
     .select({ id: seasons.id })
@@ -34,10 +36,15 @@ export const GET = RouteHandler(async (req) => {
     throw ApiError.notFound("Musim tidak ditemukan");
   }
 
+  // Base filter: season + optional club
+  const baseFilter = club_id
+    ? sql`${player_stats.season_id} = ${season_id} AND ${player_stats.club_id} = ${club_id}`
+    : sql`${player_stats.season_id} = ${season_id}`;
+
   const [totalPlayersResult] = await orm
     .select({ total: sql<number>`COUNT(DISTINCT ${player_stats.player_id})` })
     .from(player_stats)
-    .where(eq(player_stats.season_id, season_id));
+    .where(baseFilter);
 
   const topScorer = await orm
     .select({
@@ -47,7 +54,7 @@ export const GET = RouteHandler(async (req) => {
     })
     .from(player_stats)
     .innerJoin(players, eq(player_stats.player_id, players.id))
-    .where(eq(player_stats.season_id, season_id))
+    .where(baseFilter)
     .groupBy(player_stats.player_id, players.full_name)
     .orderBy(desc(sql`SUM(${player_stats.goals})`), asc(players.full_name))
     .limit(1);
@@ -60,13 +67,14 @@ export const GET = RouteHandler(async (req) => {
     })
     .from(player_stats)
     .innerJoin(players, eq(player_stats.player_id, players.id))
-    .where(eq(player_stats.season_id, season_id))
+    .where(baseFilter)
     .groupBy(player_stats.player_id, players.full_name)
     .orderBy(desc(sql`SUM(${player_stats.assists})`), asc(players.full_name))
     .limit(1);
 
   return ApiResponse.ok("Ringkasan dasbor berhasil diambil", {
     season_id,
+    club_id: club_id ?? null,
     total_players: totalPlayersResult?.total ?? 0,
     top_scorer: topScorer,
     top_assist: topAssist,
