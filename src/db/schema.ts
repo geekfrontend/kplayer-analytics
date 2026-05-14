@@ -12,6 +12,8 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password_hash: text("password_hash").notNull(),
   role: text("role", { enum: ["admin", "analyst"] }).notNull(),
+  active_season_id: text("active_season_id"),
+  active_league_id: text("active_league_id"),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
   deleted_at: text("deleted_at"),
@@ -25,21 +27,30 @@ export const sessions = pgTable("sessions", {
   created_at: text("created_at").notNull(),
 });
 
+export const leagues = pgTable("leagues", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  country: text("country").notNull(),
+  created_at: text("created_at").notNull(),
+  updated_at: text("updated_at").notNull(),
+});
+
 export const seasons = pgTable("seasons", {
   id: text("id").primaryKey(),
   name: text("name").notNull().unique(),
+  league_id: text("league_id").references(() => leagues.id, {
+    onDelete: "restrict",
+  }),
   start_date: text("start_date").notNull(),
   end_date: text("end_date").notNull(),
   is_active: integer("is_active").notNull().default(0),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
-  deleted_at: text("deleted_at"),
 });
 
 export const clubs = pgTable("clubs", {
   id: text("id").primaryKey(),
   name: text("name").notNull().unique(),
-  country: text("country"),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
 });
@@ -66,14 +77,11 @@ export const season_clubs = pgTable(
       .references(() => clubs.id, { onDelete: "restrict" }),
     created_at: text("created_at").notNull(),
   },
-  (table) => ({
-    uqSeasonClubPair: uniqueIndex("uq_season_clubs_pair").on(
-      table.season_id,
-      table.club_id,
-    ),
-    idxSeasonClubsSeason: index("idx_season_clubs_season").on(table.season_id),
-    idxSeasonClubsClub: index("idx_season_clubs_club").on(table.club_id),
-  }),
+  (table) => [
+    uniqueIndex("uq_season_clubs_pair").on(table.season_id, table.club_id),
+    index("idx_season_clubs_season").on(table.season_id),
+    index("idx_season_clubs_club").on(table.club_id),
+  ],
 );
 
 export const player_club_history = pgTable(
@@ -95,14 +103,16 @@ export const player_club_history = pgTable(
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),
   },
-  (table) => ({
-    idxPlayerClubHistoryPlayerSeason: index(
-      "idx_player_club_history_player_season",
-    ).on(table.player_id, table.season_id),
-    idxPlayerClubHistoryClubSeason: index(
-      "idx_player_club_history_club_season",
-    ).on(table.club_id, table.season_id),
-  }),
+  (table) => [
+    index("idx_player_club_history_player_season").on(
+      table.player_id,
+      table.season_id,
+    ),
+    index("idx_player_club_history_club_season").on(
+      table.club_id,
+      table.season_id,
+    ),
+  ],
 );
 
 export const player_stats = pgTable(
@@ -131,23 +141,20 @@ export const player_stats = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
   },
-  (table) => ({
-    uqPlayerStatsScope: uniqueIndex("uq_player_stats_scope").on(
+  (table) => [
+    uniqueIndex("uq_player_stats_scope").on(
       table.player_id,
       table.season_id,
       table.club_id,
     ),
-    idxPlayerStatsSeasonClub: index("idx_player_stats_season_club").on(
-      table.season_id,
-      table.club_id,
-    ),
-    idxPlayerStatsPlayerSeason: index("idx_player_stats_player_season").on(
+    index("idx_player_stats_season_club").on(table.season_id, table.club_id),
+    index("idx_player_stats_player_season").on(
       table.player_id,
       table.season_id,
     ),
-    idxPlayerStatsGoals: index("idx_player_stats_goals").on(table.goals),
-    idxPlayerStatsAssists: index("idx_player_stats_assists").on(table.assists),
-  }),
+    index("idx_player_stats_goals").on(table.goals),
+    index("idx_player_stats_assists").on(table.assists),
+  ],
 );
 
 export const player_stats_history = pgTable(
@@ -164,12 +171,11 @@ export const player_stats_history = pgTable(
       .references(() => users.id, { onDelete: "restrict" }),
     changed_at: text("changed_at").notNull(),
   },
-  (table) => ({
-    idxPlayerStatsHistoryChangedAt: index("idx_player_stats_history_changed_at").on(
+  (table) => [
+    index("idx_player_stats_history_changed_at").on(table.changed_at),
+    index("idx_player_stats_history_stats_changed").on(
+      table.player_stats_id,
       table.changed_at,
     ),
-    idxPlayerStatsHistoryStatsChanged: index(
-      "idx_player_stats_history_stats_changed",
-    ).on(table.player_stats_id, table.changed_at),
-  }),
+  ],
 );

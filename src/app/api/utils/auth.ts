@@ -14,6 +14,8 @@ type UserRow = {
   name: string;
   email: string;
   role: UserRole;
+  active_season_id: string | null;
+  active_league_id: string | null;
 };
 
 type SessionUserRow = UserRow & {
@@ -115,6 +117,8 @@ export async function findUserByEmail(email: string) {
       email: users.email,
       password_hash: users.password_hash,
       role: users.role,
+      active_season_id: users.active_season_id,
+      active_league_id: users.active_league_id,
     })
     .from(users)
     .where(and(eq(users.email, email), isNull(users.deleted_at)))
@@ -133,6 +137,8 @@ export async function requireAuth(req: NextRequest): Promise<UserRow> {
       name: users.name,
       email: users.email,
       role: users.role,
+      active_season_id: users.active_season_id,
+      active_league_id: users.active_league_id,
       expires_at: sessions.expires_at,
     })
     .from(sessions)
@@ -160,6 +166,8 @@ export async function requireAuth(req: NextRequest): Promise<UserRow> {
     name: sessionUser.name,
     email: sessionUser.email,
     role: sessionUser.role,
+    active_season_id: sessionUser.active_season_id,
+    active_league_id: sessionUser.active_league_id,
   };
 }
 

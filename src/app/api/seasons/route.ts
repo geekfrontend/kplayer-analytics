@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, count, desc, like, SQL } from "drizzle-orm";
+import { and, count, desc, eq, like, SQL } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
@@ -7,17 +7,23 @@ import { requireAuth, requireRole } from "@/app/api/utils/auth";
 import { getDbErrorCode, PG_UNIQUE_VIOLATION } from "@/app/api/utils/db-error";
 import { RouteHandler } from "@/app/api/utils/route-handler";
 import { nowIsoString, orm } from "@/db/postgres";
-import { seasons } from "@/db/schema";
+import { leagues, seasons } from "@/db/schema";
 
 const querySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   q: z.string().trim().optional(),
+  league_id: z.uuid("Format league_id tidak valid").optional(),
 });
 
 const createSeasonSchema = z
   .object({
     name: z.string().regex(/^\d{4}\/\d{4}$/, "Format season harus YYYY/YYYY"),
+    league_id: z
+      .string()
+      .optional()
+      .transform((val) => (val && val.trim() !== "" ? val : undefined))
+      .pipe(z.uuid("Format league_id tidak valid").optional()),
     start_date: z.iso.date("Format start_date harus YYYY-MM-DD"),
     end_date: z.iso.date("Format end_date harus YYYY-MM-DD"),
     is_active: z.boolean().optional().default(false),
@@ -39,16 +45,20 @@ export const GET = RouteHandler(async (req) => {
     page: req.nextUrl.searchParams.get("page") ?? undefined,
     limit: req.nextUrl.searchParams.get("limit") ?? undefined,
     q: req.nextUrl.searchParams.get("q") ?? undefined,
+    league_id: req.nextUrl.searchParams.get("league_id") ?? undefined,
   });
   if (!parsedQuery.success) {
     throw ApiError.badRequest("Query tidak valid", parsedQuery.error.issues);
   }
 
-  const { page, limit, q } = parsedQuery.data;
+  const { page, limit, q, league_id } = parsedQuery.data;
   const offset = (page - 1) * limit;
   const whereConditions: SQL[] = [];
   if (q) {
     whereConditions.push(like(seasons.name, `%${q}%`));
+  }
+  if (league_id) {
+    whereConditions.push(eq(seasons.league_id, league_id));
   }
   const whereClause =
     whereConditions.length > 0 ? and(...whereConditions) : undefined;
@@ -57,6 +67,9 @@ export const GET = RouteHandler(async (req) => {
     .select({
       id: seasons.id,
       name: seasons.name,
+      league_id: seasons.league_id,
+      league_name: leagues.name,
+      league_country: leagues.country,
       start_date: seasons.start_date,
       end_date: seasons.end_date,
       is_active: seasons.is_active,
@@ -64,6 +77,7 @@ export const GET = RouteHandler(async (req) => {
       updated_at: seasons.updated_at,
     })
     .from(seasons)
+    .leftJoin(leagues, eq(seasons.league_id, leagues.id))
     .where(whereClause)
     .orderBy(desc(seasons.start_date))
     .limit(limit)
@@ -94,21 +108,32 @@ export const POST = RouteHandler(async (req) => {
     throw ApiError.badRequest("Input season tidak valid", parsed.error.issues);
   }
 
+  // Validasi league_id jika diberikan
+  if (parsed.data.league_id) {
+    const [league] = await orm
+      .select({ id: leagues.id })
+      .from(leagues)
+      .where(eq(leagues.id, parsed.data.league_id))
+      .limit(1);
+    if (!league) {
+      throw ApiError.badRequest("Liga tidak ditemukan");
+    }
+  }
+
   const id = randomUUID();
   const now = nowIsoString();
 
   try {
-    await orm
-      .insert(seasons)
-      .values({
-        id,
-        name: parsed.data.name,
-        start_date: parsed.data.start_date,
-        end_date: parsed.data.end_date,
-        is_active: parsed.data.is_active ? 1 : 0,
-        created_at: now,
-        updated_at: now,
-      });
+    await orm.insert(seasons).values({
+      id,
+      name: parsed.data.name,
+      league_id: parsed.data.league_id ?? null,
+      start_date: parsed.data.start_date,
+      end_date: parsed.data.end_date,
+      is_active: parsed.data.is_active ? 1 : 0,
+      created_at: now,
+      updated_at: now,
+    });
   } catch (error) {
     if (getDbErrorCode(error) === PG_UNIQUE_VIOLATION) {
       throw ApiError.conflict("Musim sudah terdaftar");

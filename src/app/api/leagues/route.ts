@@ -7,7 +7,7 @@ import { requireAuth, requireRole } from "@/app/api/utils/auth";
 import { getDbErrorCode, PG_UNIQUE_VIOLATION } from "@/app/api/utils/db-error";
 import { RouteHandler } from "@/app/api/utils/route-handler";
 import { nowIsoString, orm } from "@/db/postgres";
-import { clubs } from "@/db/schema";
+import { leagues } from "@/db/schema";
 
 const querySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -15,12 +15,14 @@ const querySchema = z.object({
   q: z.string().trim().optional(),
 });
 
-const createClubSchema = z.object({
-  name: z.string().trim().min(2, "Nama klub minimal 2 karakter"),
+const createLeagueSchema = z.object({
+  name: z.string().trim().min(2, "Nama liga minimal 2 karakter"),
+  country: z.string().trim().min(2, "Negara minimal 2 karakter"),
 });
 
 export const GET = RouteHandler(async (req) => {
   await requireAuth(req);
+
   const parsedQuery = querySchema.safeParse({
     page: req.nextUrl.searchParams.get("page") ?? undefined,
     limit: req.nextUrl.searchParams.get("limit") ?? undefined,
@@ -34,30 +36,31 @@ export const GET = RouteHandler(async (req) => {
   const offset = (page - 1) * limit;
   const whereConditions: SQL[] = [];
   if (q) {
-    whereConditions.push(like(clubs.name, `%${q}%`));
+    whereConditions.push(like(leagues.name, `%${q}%`));
   }
   const whereClause =
     whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
   const items = await orm
     .select({
-      id: clubs.id,
-      name: clubs.name,
-      created_at: clubs.created_at,
-      updated_at: clubs.updated_at,
+      id: leagues.id,
+      name: leagues.name,
+      country: leagues.country,
+      created_at: leagues.created_at,
+      updated_at: leagues.updated_at,
     })
-    .from(clubs)
+    .from(leagues)
     .where(whereClause)
-    .orderBy(desc(clubs.created_at))
+    .orderBy(desc(leagues.created_at))
     .limit(limit)
     .offset(offset);
 
   const [countResult] = await orm
     .select({ total: count() })
-    .from(clubs)
+    .from(leagues)
     .where(whereClause);
 
-  return ApiResponse.ok("Daftar klub berhasil diambil", {
+  return ApiResponse.ok("Daftar liga berhasil diambil", {
     items,
     pagination: {
       page,
@@ -72,32 +75,33 @@ export const POST = RouteHandler(async (req) => {
   const user = await requireAuth(req);
   requireRole(user, ["admin"]);
 
-  const parsed = createClubSchema.safeParse(await req.json());
+  const parsed = createLeagueSchema.safeParse(await req.json());
   if (!parsed.success) {
-    throw ApiError.badRequest("Input club tidak valid", parsed.error.issues);
+    throw ApiError.badRequest("Input liga tidak valid", parsed.error.issues);
   }
 
   const id = randomUUID();
   const now = nowIsoString();
+
   try {
-    await orm
-      .insert(clubs)
-      .values({
-        id,
-        name: parsed.data.name,
-        created_at: now,
-        updated_at: now,
-      });
+    await orm.insert(leagues).values({
+      id,
+      name: parsed.data.name,
+      country: parsed.data.country,
+      created_at: now,
+      updated_at: now,
+    });
   } catch (error) {
     if (getDbErrorCode(error) === PG_UNIQUE_VIOLATION) {
-      throw ApiError.conflict("Klub sudah terdaftar");
+      throw ApiError.conflict("Liga sudah terdaftar");
     }
     throw error;
   }
 
-  return ApiResponse.created("Klub berhasil dibuat", {
+  return ApiResponse.created("Liga berhasil dibuat", {
     id,
     name: parsed.data.name,
+    country: parsed.data.country,
     created_at: now,
     updated_at: now,
   });

@@ -15,7 +15,6 @@ const paramsSchema = z.object({
 const updateClubSchema = z
   .object({
     name: z.string().trim().min(2, "Nama klub minimal 2 karakter").optional(),
-    country: z.string().trim().min(2, "Negara minimal 2 karakter").optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "Minimal 1 field harus diisi",
@@ -37,7 +36,6 @@ export const GET = RouteHandler(async (req, ctx) => {
     .select({
       id: clubs.id,
       name: clubs.name,
-      country: clubs.country,
       created_at: clubs.created_at,
       updated_at: clubs.updated_at,
     })
@@ -74,7 +72,6 @@ export const PATCH = RouteHandler(async (req, ctx) => {
 
   const updates: {
     name?: string;
-    country?: string;
     updated_at: string;
   } = {
     updated_at: nowIsoString(),
@@ -82,9 +79,6 @@ export const PATCH = RouteHandler(async (req, ctx) => {
 
   if (parsed.data.name) {
     updates.name = parsed.data.name;
-  }
-  if (parsed.data.country) {
-    updates.country = parsed.data.country;
   }
 
   try {
@@ -100,7 +94,6 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     .select({
       id: clubs.id,
       name: clubs.name,
-      country: clubs.country,
       created_at: clubs.created_at,
       updated_at: clubs.updated_at,
     })

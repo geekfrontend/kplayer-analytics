@@ -6,7 +6,7 @@ import { requireAuth, requireRole } from "@/app/api/utils/auth";
 import { getDbErrorCode, PG_UNIQUE_VIOLATION } from "@/app/api/utils/db-error";
 import { RouteHandler } from "@/app/api/utils/route-handler";
 import { nowIsoString, orm } from "@/db/postgres";
-import { seasons } from "@/db/schema";
+import { leagues, seasons } from "@/db/schema";
 
 const paramsSchema = z.object({
   id: z.uuid("Format id season tidak valid"),
@@ -17,6 +17,9 @@ const updateSeasonSchema = z
     name: z
       .string()
       .regex(/^\d{4}\/\d{4}$/, "Format season harus YYYY/YYYY")
+      .optional(),
+    league_id: z
+      .union([z.uuid("Format league_id tidak valid"), z.null()])
       .optional(),
     start_date: z.iso.date("Format start_date harus YYYY-MM-DD").optional(),
     end_date: z.iso.date("Format end_date harus YYYY-MM-DD").optional(),
@@ -48,14 +51,14 @@ async function parseSeasonId(params: Promise<Record<string, string>>) {
   return parsed.data.id;
 }
 
-export const GET = RouteHandler(async (req, ctx) => {
-  await requireAuth(req);
-  const seasonId = await parseSeasonId(ctx.params);
-
-  const [season] = await orm
+function selectSeasonWithLeague(seasonId: string) {
+  return orm
     .select({
       id: seasons.id,
       name: seasons.name,
+      league_id: seasons.league_id,
+      league_name: leagues.name,
+      league_country: leagues.country,
       start_date: seasons.start_date,
       end_date: seasons.end_date,
       is_active: seasons.is_active,
@@ -63,8 +66,16 @@ export const GET = RouteHandler(async (req, ctx) => {
       updated_at: seasons.updated_at,
     })
     .from(seasons)
+    .leftJoin(leagues, eq(seasons.league_id, leagues.id))
     .where(eq(seasons.id, seasonId))
     .limit(1);
+}
+
+export const GET = RouteHandler(async (req, ctx) => {
+  await requireAuth(req);
+  const seasonId = await parseSeasonId(ctx.params);
+
+  const [season] = await selectSeasonWithLeague(seasonId);
 
   if (!season) {
     throw ApiError.notFound("Musim tidak ditemukan");
@@ -93,8 +104,21 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     throw ApiError.notFound("Musim tidak ditemukan");
   }
 
+  // Validasi league_id jika diberikan
+  if (parsed.data.league_id) {
+    const [league] = await orm
+      .select({ id: leagues.id })
+      .from(leagues)
+      .where(eq(leagues.id, parsed.data.league_id))
+      .limit(1);
+    if (!league) {
+      throw ApiError.badRequest("Liga tidak ditemukan");
+    }
+  }
+
   const updates: {
     name?: string;
+    league_id?: string | null;
     start_date?: string;
     end_date?: string;
     is_active?: number;
@@ -103,15 +127,10 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     updated_at: nowIsoString(),
   };
 
-  if (parsed.data.name) {
-    updates.name = parsed.data.name;
-  }
-  if (parsed.data.start_date) {
-    updates.start_date = parsed.data.start_date;
-  }
-  if (parsed.data.end_date) {
-    updates.end_date = parsed.data.end_date;
-  }
+  if (parsed.data.name) updates.name = parsed.data.name;
+  if (parsed.data.league_id !== undefined) updates.league_id = parsed.data.league_id;
+  if (parsed.data.start_date) updates.start_date = parsed.data.start_date;
+  if (parsed.data.end_date) updates.end_date = parsed.data.end_date;
   if (typeof parsed.data.is_active === "boolean") {
     updates.is_active = parsed.data.is_active ? 1 : 0;
   }
@@ -125,19 +144,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     throw error;
   }
 
-  const [season] = await orm
-    .select({
-      id: seasons.id,
-      name: seasons.name,
-      start_date: seasons.start_date,
-      end_date: seasons.end_date,
-      is_active: seasons.is_active,
-      created_at: seasons.created_at,
-      updated_at: seasons.updated_at,
-    })
-    .from(seasons)
-    .where(eq(seasons.id, seasonId))
-    .limit(1);
+  const [season] = await selectSeasonWithLeague(seasonId);
 
   return ApiResponse.ok("Musim berhasil diperbarui", { season });
 });

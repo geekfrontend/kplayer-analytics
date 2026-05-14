@@ -12,6 +12,8 @@ export type AuthUser = {
   name: string;
   email: string;
   role: UserRole;
+  active_season_id: string | null;
+  active_league_id: string | null;
 };
 
 type LoginPayload = {
@@ -94,6 +96,42 @@ export async function me() {
 export async function logout() {
   return apiRequest<null>("/api/auth/logout", {
     method: "POST",
+    auth: true,
+  });
+}
+
+export async function setActiveSeason(seasonId: string) {
+  const result = await apiRequest<{
+    active_season_id: string;
+    active_season_name: string;
+    active_league_id: string | null;
+    active_league_name: string | null;
+  }>("/api/auth/active-season", {
+    method: "PATCH",
+    auth: true,
+    body: { season_id: seasonId },
+  });
+
+  return result.envelope.data;
+}
+
+export async function setActiveLeague(leagueId: string) {
+  const result = await apiRequest<{
+    active_league_id: string;
+    active_league_name: string;
+    active_league_country: string;
+  }>("/api/auth/active-league", {
+    method: "PATCH",
+    auth: true,
+    body: { league_id: leagueId },
+  });
+
+  return result.envelope.data;
+}
+
+export async function clearActiveLeague() {
+  return apiRequest<null>("/api/auth/active-league", {
+    method: "DELETE",
     auth: true,
   });
 }
