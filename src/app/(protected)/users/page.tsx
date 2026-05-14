@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createColumnHelper,
@@ -14,7 +14,17 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { KeyRound, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  KeyRound,
+  Loader2,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -40,7 +50,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,6 +70,8 @@ import {
 } from "@/components/ui/table";
 import { apiRequest, isApiClientError } from "@/lib/api-client";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 type UserItem = {
   id: string;
   name: string;
@@ -80,33 +91,31 @@ type UsersListResponse = {
   };
 };
 
+// ─── Schemas ──────────────────────────────────────────────────────────────────
+
+const passwordRules = z
+  .string()
+  .min(8, "Minimal 8 karakter")
+  .regex(/[A-Z]/, "Wajib mengandung huruf besar")
+  .regex(/[a-z]/, "Wajib mengandung huruf kecil")
+  .regex(/[0-9]/, "Wajib mengandung angka")
+  .regex(/[^A-Za-z0-9]/, "Wajib mengandung simbol");
+
 const createUserSchema = z.object({
   name: z.string().trim().min(3, "Nama minimal 3 karakter"),
-  email: z.email("Email tidak valid").transform((value) => value.toLowerCase()),
+  email: z.email("Email tidak valid").transform((v) => v.toLowerCase()),
   role: z.enum(["admin", "analyst"]),
-  password: z
-    .string()
-    .min(8, "Kata sandi minimal 8 karakter")
-    .regex(/[A-Z]/, "Kata sandi wajib mengandung huruf besar")
-    .regex(/[a-z]/, "Kata sandi wajib mengandung huruf kecil")
-    .regex(/[0-9]/, "Kata sandi wajib mengandung angka")
-    .regex(/[^A-Za-z0-9]/, "Kata sandi wajib mengandung simbol"),
+  password: passwordRules,
 });
 
 const updateUserSchema = z.object({
   name: z.string().trim().min(3, "Nama minimal 3 karakter"),
-  email: z.email("Email tidak valid").transform((value) => value.toLowerCase()),
+  email: z.email("Email tidak valid").transform((v) => v.toLowerCase()),
   role: z.enum(["admin", "analyst"]),
 });
 
 const resetPasswordSchema = z.object({
-  new_password: z
-    .string()
-    .min(8, "Kata sandi minimal 8 karakter")
-    .regex(/[A-Z]/, "Kata sandi wajib mengandung huruf besar")
-    .regex(/[a-z]/, "Kata sandi wajib mengandung huruf kecil")
-    .regex(/[0-9]/, "Kata sandi wajib mengandung angka")
-    .regex(/[^A-Za-z0-9]/, "Kata sandi wajib mengandung simbol"),
+  new_password: passwordRules,
 });
 
 type CreateUserPayload = z.infer<typeof createUserSchema>;
@@ -116,28 +125,81 @@ type UpdateUserInput = z.input<typeof updateUserSchema>;
 type ResetPasswordPayload = z.infer<typeof resetPasswordSchema>;
 type ResetPasswordInput = z.input<typeof resetPasswordSchema>;
 
+// ─── Query keys ───────────────────────────────────────────────────────────────
+
 const columnHelper = createColumnHelper<UserItem>();
+
 const usersKeys = {
   all: ["users"] as const,
   list: (params: { page: number; q: string; role: string }) =>
     [...usersKeys.all, "list", params] as const,
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function getErrorMessage(error: unknown, fallback: string) {
-  if (isApiClientError(error)) {
-    return error.message;
-  }
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
+  if (isApiClientError(error)) return error.message;
+  if (error instanceof Error && error.message) return error.message;
   return fallback;
 }
 
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function UsersTableSkeleton() {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <TableRow key={i}>
+          <TableCell><div className="h-4 w-28 animate-pulse rounded bg-muted" /></TableCell>
+          <TableCell><div className="h-4 w-40 animate-pulse rounded bg-muted" /></TableCell>
+          <TableCell><div className="h-5 w-14 animate-pulse rounded-full bg-muted" /></TableCell>
+          <TableCell><div className="h-4 w-20 animate-pulse rounded bg-muted" /></TableCell>
+          <TableCell>
+            <div className="flex justify-end gap-1">
+              <div className="h-6 w-6 animate-pulse rounded bg-muted" />
+              <div className="h-6 w-6 animate-pulse rounded bg-muted" />
+              <div className="h-6 w-6 animate-pulse rounded bg-muted" />
+            </div>
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
+}
+
+// ─── Role select ──────────────────────────────────────────────────────────────
+
+function RoleSelect({
+  value,
+  onChange,
+  id,
+}: {
+  value: "admin" | "analyst";
+  onChange: (v: "admin" | "analyst") => void;
+  id?: string;
+}) {
+  return (
+    <Select
+      value={value}
+      onValueChange={(v) => onChange(v as "admin" | "analyst")}
+    >
+      <SelectTrigger id={id} className="bg-background">
+        <SelectValue placeholder="Pilih peran" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="admin">Admin</SelectItem>
+        <SelectItem value="analyst">Analis</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function UsersPage() {
   const { isAdmin } = useAdminGuard();
-  const canWrite = isAdmin;
 
-  if (!canWrite) {
+  if (!isAdmin) {
     return (
       <EmptyPage
         title="Akses Ditolak"
@@ -146,46 +208,44 @@ export default function UsersPage() {
     );
   }
 
+  return <UsersPageContent />;
+}
+
+function UsersPageContent() {
   const queryClient = useQueryClient();
+
   const [searchInput, setSearchInput] = useState("");
-  const [roleFilterInput, setRoleFilterInput] = useState("all");
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
-  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+
+  // Dialog state
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserItem | null>(null);
   const [resetTarget, setResetTarget] = useState<UserItem | null>(null);
+  const [isResetOpen, setIsResetOpen] = useState(false);
 
+  // Forms
   const createForm = useForm<CreateUserInput, unknown, CreateUserPayload>({
     resolver: zodResolver(createUserSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      role: "analyst",
-      password: "",
-    },
+    defaultValues: { name: "", email: "", role: "analyst", password: "" },
     mode: "onTouched",
   });
 
   const updateForm = useForm<UpdateUserInput, unknown, UpdateUserPayload>({
     resolver: zodResolver(updateUserSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      role: "analyst",
-    },
+    defaultValues: { name: "", email: "", role: "analyst" },
     mode: "onTouched",
   });
 
   const resetForm = useForm<ResetPasswordInput, unknown, ResetPasswordPayload>({
     resolver: zodResolver(resetPasswordSchema),
-    defaultValues: {
-      new_password: "",
-    },
+    defaultValues: { new_password: "" },
     mode: "onTouched",
   });
+
+  // ─── Queries ────────────────────────────────────────────────────────────────
 
   const usersQuery = useQuery({
     queryKey: usersKeys.list({ page, q, role: roleFilter }),
@@ -194,50 +254,37 @@ export default function UsersPage() {
       const params = new URLSearchParams();
       params.set("page", String(page));
       params.set("limit", "10");
-      if (q.trim()) {
-        params.set("q", q.trim());
-      }
-      if (roleFilter !== "all") {
-        params.set("role", roleFilter);
-      }
+      if (q.trim()) params.set("q", q.trim());
+      if (roleFilter !== "all") params.set("role", roleFilter);
 
       const result = await apiRequest<UsersListResponse>(
         `/api/users?${params.toString()}`,
         { auth: true },
       );
-
-      return (
-        result.envelope.data ?? {
-          items: [],
-          pagination: { page: 1, limit: 10, total: 0, total_pages: 1 },
-        }
-      );
+      return result.envelope.data ?? {
+        items: [],
+        pagination: { page: 1, limit: 10, total: 0, total_pages: 1 },
+      };
     },
   });
 
-  const createUserMutation = useMutation({
+  // ─── Mutations ──────────────────────────────────────────────────────────────
+
+  const createMutation = useMutation({
     mutationFn: async (payload: CreateUserPayload) => {
-      await apiRequest("/api/users", {
-        method: "POST",
-        auth: true,
-        body: payload,
-      });
+      await apiRequest("/api/users", { method: "POST", auth: true, body: payload });
     },
     onSuccess: async () => {
       toast.success("Pengguna berhasil dibuat");
-      setIsFormDialogOpen(false);
+      setIsFormOpen(false);
       createForm.reset();
       setPage(1);
-      await queryClient.invalidateQueries({
-        queryKey: usersKeys.all,
-      });
+      await queryClient.invalidateQueries({ queryKey: usersKeys.all });
     },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, "Gagal membuat pengguna."));
-    },
+    onError: (error) => toast.error(getErrorMessage(error, "Gagal membuat pengguna.")),
   });
 
-  const updateUserMutation = useMutation({
+  const updateMutation = useMutation({
     mutationFn: async (params: { id: string; payload: UpdateUserPayload }) => {
       await apiRequest(`/api/users/${params.id}`, {
         method: "PATCH",
@@ -247,138 +294,124 @@ export default function UsersPage() {
     },
     onSuccess: async () => {
       toast.success("Pengguna berhasil diperbarui");
-      setIsFormDialogOpen(false);
+      setIsFormOpen(false);
       setEditingUser(null);
       updateForm.reset();
-      await queryClient.invalidateQueries({
-        queryKey: usersKeys.all,
-      });
+      await queryClient.invalidateQueries({ queryKey: usersKeys.all });
     },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, "Gagal memperbarui pengguna."));
-    },
+    onError: (error) => toast.error(getErrorMessage(error, "Gagal memperbarui pengguna.")),
   });
 
-  const deleteUserMutation = useMutation({
+  const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest(`/api/users/${id}`, {
-        method: "DELETE",
-        auth: true,
-      });
+      await apiRequest(`/api/users/${id}`, { method: "DELETE", auth: true });
     },
     onSuccess: async () => {
       toast.success("Pengguna berhasil dihapus");
       setDeleteTarget(null);
-      await queryClient.invalidateQueries({
-        queryKey: usersKeys.all,
-      });
+      await queryClient.invalidateQueries({ queryKey: usersKeys.all });
     },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, "Gagal menghapus pengguna."));
-    },
+    onError: (error) => toast.error(getErrorMessage(error, "Gagal menghapus pengguna.")),
   });
 
   const resetPasswordMutation = useMutation({
-    mutationFn: async (params: {
-      id: string;
-      payload: ResetPasswordPayload;
-    }) => {
+    mutationFn: async (params: { id: string; payload: ResetPasswordPayload }) => {
       await apiRequest(`/api/users/${params.id}/reset-password`, {
         method: "PATCH",
         auth: true,
         body: params.payload,
       });
     },
-    onSuccess: async () => {
-      toast.success("Kata sandi pengguna berhasil diatur ulang");
-      setIsResetDialogOpen(false);
+    onSuccess: () => {
+      toast.success("Kata sandi berhasil diatur ulang");
+      setIsResetOpen(false);
       setResetTarget(null);
       resetForm.reset();
     },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, "Gagal mengatur ulang kata sandi."));
-    },
+    onError: (error) => toast.error(getErrorMessage(error, "Gagal mengatur ulang kata sandi.")),
   });
 
-  const columns = useMemo(
-    () => [
-      columnHelper.accessor("name", {
-        header: "Nama",
-        cell: (info) => (
-          <span className="font-medium text-foreground">{info.getValue()}</span>
+  // ─── Table columns ──────────────────────────────────────────────────────────
+
+  const columns = [
+    columnHelper.accessor("name", {
+      header: "Nama",
+      cell: (info) => (
+        <span className="font-medium text-foreground">{info.getValue()}</span>
+      ),
+    }),
+    columnHelper.accessor("email", {
+      header: "Email",
+      cell: (info) => (
+        <span className="text-muted-foreground">{info.getValue()}</span>
+      ),
+    }),
+    columnHelper.accessor("role", {
+      header: "Peran",
+      cell: (info) =>
+        info.getValue() === "admin" ? (
+          <Badge>Admin</Badge>
+        ) : (
+          <Badge variant="outline">Analis</Badge>
         ),
-      }),
-      columnHelper.accessor("email", {
-        header: "Email",
-      }),
-      columnHelper.accessor("role", {
-        header: "Peran",
-        cell: (info) =>
-          info.getValue() === "admin" ? (
-            <Badge>Admin</Badge>
-          ) : (
-            <Badge variant="outline">Analis</Badge>
-          ),
-      }),
-      columnHelper.accessor("updated_at", {
-        header: "Diperbarui",
-        cell: (info) => info.getValue().slice(0, 10),
-      }),
-      ...(canWrite
-        ? [
-            columnHelper.display({
-              id: "actions",
-              header: "Aksi",
-              cell: ({ row }) => (
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const rowUser = row.original;
-                      setEditingUser(rowUser);
-                      updateForm.reset({
-                        name: rowUser.name,
-                        email: rowUser.email,
-                        role: rowUser.role,
-                      });
-                      setIsFormDialogOpen(true);
-                    }}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Edit
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setResetTarget(row.original);
-                      resetForm.reset({ new_password: "" });
-                      setIsResetDialogOpen(true);
-                    }}
-                  >
-                    <KeyRound className="h-3.5 w-3.5" />
-                    Atur Ulang Kata Sandi
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDeleteTarget(row.original)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Hapus
-                  </Button>
-                </div>
-              ),
-            }),
-          ]
-        : []),
-    ],
-    [canWrite, resetForm, updateForm],
-  );
+    }),
+    columnHelper.accessor("updated_at", {
+      header: "Diperbarui",
+      cell: (info) => (
+        <span className="text-muted-foreground">{info.getValue().slice(0, 10)}</span>
+      ),
+    }),
+    columnHelper.display({
+      id: "actions",
+      header: "",
+      cell: ({ row }) => (
+        <div className="flex justify-end gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            title="Edit pengguna"
+            onClick={() => {
+              setEditingUser(row.original);
+              updateForm.reset({
+                name: row.original.name,
+                email: row.original.email,
+                role: row.original.role,
+              });
+              setIsFormOpen(true);
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            title="Atur ulang kata sandi"
+            onClick={() => {
+              setResetTarget(row.original);
+              resetForm.reset({ new_password: "" });
+              setIsResetOpen(true);
+            }}
+          >
+            <KeyRound className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            title="Hapus pengguna"
+            onClick={() => setDeleteTarget(row.original)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ),
+    }),
+  ];
 
   const table = useReactTable({
     data: usersQuery.data?.items ?? [],
@@ -386,317 +419,99 @@ export default function UsersPage() {
     getCoreRowModel: getCoreRowModel(),
   });
 
-  const totalPages = usersQuery.data?.pagination.total_pages ?? 1;
+  // ─── Derived ────────────────────────────────────────────────────────────────
 
-  const queryErrorMessage = usersQuery.error
+  const total = usersQuery.data?.pagination.total ?? 0;
+  const totalPages = usersQuery.data?.pagination.total_pages ?? 1;
+  const isEditing = Boolean(editingUser);
+
+  const errorMessage = usersQuery.error
     ? getErrorMessage(usersQuery.error, "Gagal mengambil data pengguna.")
     : null;
-  const createErrorMessage = createUserMutation.error
-    ? getErrorMessage(createUserMutation.error, "Gagal membuat pengguna.")
-    : null;
-  const updateErrorMessage = updateUserMutation.error
-    ? getErrorMessage(updateUserMutation.error, "Gagal memperbarui pengguna.")
-    : null;
-  const deleteErrorMessage = deleteUserMutation.error
-    ? getErrorMessage(deleteUserMutation.error, "Gagal menghapus pengguna.")
-    : null;
-  const resetErrorMessage = resetPasswordMutation.error
-    ? getErrorMessage(
-        resetPasswordMutation.error,
-        "Gagal mengatur ulang kata sandi pengguna.",
-      )
-    : null;
-  const errorMessage =
-    createErrorMessage ??
-    updateErrorMessage ??
-    deleteErrorMessage ??
-    resetErrorMessage ??
-    queryErrorMessage;
 
-  const handleCreate = createForm.handleSubmit(async (values) => {
-    await createUserMutation.mutateAsync(values);
-  });
-
-  const handleUpdate = updateForm.handleSubmit(async (values) => {
-    if (!editingUser) {
-      return;
-    }
-    await updateUserMutation.mutateAsync({
-      id: editingUser.id,
-      payload: values,
-    });
-  });
-
-  const handleResetPassword = resetForm.handleSubmit(async (values) => {
-    if (!resetTarget) {
-      return;
-    }
-    await resetPasswordMutation.mutateAsync({
-      id: resetTarget.id,
-      payload: values,
-    });
-  });
+  // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <section className="space-y-4">
       <Card className="border-border bg-background shadow-[0_1px_2px_rgba(2,8,23,0.04),0_8px_24px_rgba(2,8,23,0.04)]">
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1.5">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-0.5">
             <CardTitle>Pengguna</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Kelola akun pengguna dan role akses aplikasi.
+              {total} pengguna terdaftar
             </p>
           </div>
-          {canWrite ? (
-            <Dialog
-              open={isFormDialogOpen}
-              onOpenChange={(open) => {
-                setIsFormDialogOpen(open);
-                if (!open) {
-                  setEditingUser(null);
-                  createForm.reset();
-                  updateForm.reset();
-                  createUserMutation.reset();
-                  updateUserMutation.reset();
-                }
+
+          {/* Filter bar + tombol tambah */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Search */}
+            <form
+              className="flex items-center gap-1"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setPage(1);
+                setQ(searchInput.trim());
               }}
             >
-              <DialogTrigger asChild>
+              <div className="relative">
+                <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Cari nama atau email..."
+                  className="h-8 w-48 pl-8 text-sm"
+                />
+              </div>
+              <Button type="submit" variant="outline" size="icon" className="h-8 w-8" title="Cari">
+                <Search className="h-3.5 w-3.5" />
+              </Button>
+              {q ? (
                 <Button
-                  onClick={() => {
-                    setEditingUser(null);
-                    createForm.reset({
-                      name: "",
-                      email: "",
-                      role: "analyst",
-                      password: "",
-                    });
-                  }}
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Reset"
+                  onClick={() => { setSearchInput(""); setQ(""); setPage(1); }}
                 >
-                  <Plus className="h-4 w-4" />
-                  Tambah Pengguna
+                  <X className="h-3.5 w-3.5" />
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="border-border bg-background">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingUser ? "Ubah Pengguna" : "Buat Pengguna Baru"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {editingUser
-                      ? "Perbarui profil pengguna tanpa mengubah kata sandi."
-                      : "Isi data pengguna dan kata sandi awal."}
-                  </DialogDescription>
-                </DialogHeader>
+              ) : null}
+            </form>
 
-                {editingUser ? (
-                  <form className="space-y-4" onSubmit={handleUpdate}>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit_name">Nama</Label>
-                      <Input id="edit_name" {...updateForm.register("name")} />
-                      {updateForm.formState.errors.name ? (
-                        <p className="text-sm text-danger" role="alert">
-                          {updateForm.formState.errors.name.message}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit_email">Email</Label>
-                      <Input
-                        id="edit_email"
-                        type="email"
-                        {...updateForm.register("email")}
-                      />
-                      {updateForm.formState.errors.email ? (
-                        <p className="text-sm text-danger" role="alert">
-                          {updateForm.formState.errors.email.message}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit_role">Peran</Label>
-                      <Select
-                        value={updateForm.watch("role")}
-                        onValueChange={(value) =>
-                          updateForm.setValue(
-                            "role",
-                            value as "admin" | "analyst",
-                            {
-                              shouldTouch: true,
-                              shouldValidate: true,
-                            },
-                          )
-                        }
-                      >
-                        <SelectTrigger
-                          id="edit_role"
-                          className="w-full bg-background"
-                        >
-                          <SelectValue placeholder="Pilih peran" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="analyst">Analis</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <DialogFooter>
-                      <Button
-                        type="submit"
-                        disabled={
-                          updateUserMutation.isPending ||
-                          !updateForm.formState.isValid
-                        }
-                      >
-                        {updateUserMutation.isPending ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Menyimpan...
-                          </>
-                        ) : (
-                          "Simpan"
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                ) : (
-                  <form className="space-y-4" onSubmit={handleCreate}>
-                    <div className="space-y-2">
-                      <Label htmlFor="create_name">Nama</Label>
-                      <Input
-                        id="create_name"
-                        {...createForm.register("name")}
-                      />
-                      {createForm.formState.errors.name ? (
-                        <p className="text-sm text-danger" role="alert">
-                          {createForm.formState.errors.name.message}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="create_email">Email</Label>
-                      <Input
-                        id="create_email"
-                        type="email"
-                        {...createForm.register("email")}
-                      />
-                      {createForm.formState.errors.email ? (
-                        <p className="text-sm text-danger" role="alert">
-                          {createForm.formState.errors.email.message}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="create_role">Peran</Label>
-                      <Select
-                        value={createForm.watch("role")}
-                        onValueChange={(value) =>
-                          createForm.setValue(
-                            "role",
-                            value as "admin" | "analyst",
-                            {
-                              shouldTouch: true,
-                              shouldValidate: true,
-                            },
-                          )
-                        }
-                      >
-                        <SelectTrigger
-                          id="create_role"
-                          className="w-full bg-background"
-                        >
-                          <SelectValue placeholder="Pilih peran" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="analyst">Analis</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                    <Label htmlFor="create_password">Kata Sandi Awal</Label>
-                      <Input
-                        id="create_password"
-                        type="password"
-                        {...createForm.register("password")}
-                      />
-                      {createForm.formState.errors.password ? (
-                        <p className="text-sm text-danger" role="alert">
-                          {createForm.formState.errors.password.message}
-                        </p>
-                      ) : null}
-                    </div>
-                    <DialogFooter>
-                      <Button
-                        type="submit"
-                        disabled={
-                          createUserMutation.isPending ||
-                          !createForm.formState.isValid
-                        }
-                      >
-                        {createUserMutation.isPending ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Menyimpan...
-                          </>
-                        ) : (
-                          "Simpan"
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                )}
-              </DialogContent>
-            </Dialog>
-          ) : null}
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          <form
-            className="grid gap-3 rounded-(--radius-md) border border-border/80 bg-muted/50 p-3 sm:grid-cols-[1fr_180px_auto_auto]"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setPage(1);
-              setQ(searchInput.trim());
-              setRoleFilter(roleFilterInput);
-            }}
-          >
-            <Input
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Cari nama atau email..."
-              className="bg-background"
-            />
-            <Select value={roleFilterInput} onValueChange={setRoleFilterInput}>
-              <SelectTrigger className="w-full bg-background">
-                <SelectValue placeholder="Filter peran" />
+            {/* Filter role */}
+            <Select
+              value={roleFilter}
+              onValueChange={(v) => { setRoleFilter(v); setPage(1); }}
+            >
+              <SelectTrigger className="h-8 w-32 text-sm bg-background">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Semua role</SelectItem>
+                <SelectItem value="all">Semua peran</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="analyst">Analis</SelectItem>
               </SelectContent>
             </Select>
-            <Button type="submit" variant="outline">
-              Terapkan
-            </Button>
+
             <Button
-              type="button"
-              variant="outline"
+              size="sm"
+              className="h-8"
               onClick={() => {
-                setSearchInput("");
-                setRoleFilterInput("all");
-                setQ("");
-                setRoleFilter("all");
-                setPage(1);
+                setEditingUser(null);
+                createForm.reset({ name: "", email: "", role: "analyst", password: "" });
+                setIsFormOpen(true);
               }}
             >
-              Reset
+              <Plus className="h-3.5 w-3.5" />
+              Tambah
             </Button>
-          </form>
+          </div>
+        </CardHeader>
 
+        <CardContent className="space-y-4">
           {errorMessage ? (
-            <p className="rounded-(--radius-md) border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+            <p className="rounded-(--radius-md) border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {errorMessage}
             </p>
           ) : null}
@@ -710,10 +525,7 @@ export default function UsersPage() {
                       <TableHead key={header.id}>
                         {header.isPlaceholder
                           ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
+                          : flexRender(header.column.columnDef.header, header.getContext())}
                       </TableHead>
                     ))}
                   </TableRow>
@@ -721,19 +533,12 @@ export default function UsersPage() {
               </TableHeader>
               <TableBody>
                 {usersQuery.isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5}>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Memuat data pengguna...
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <UsersTableSkeleton />
                 ) : table.getRowModel().rows.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={5}
-                      className="text-sm text-muted-foreground"
+                      className="py-8 text-center text-sm text-muted-foreground"
                     >
                       Belum ada data pengguna.
                     </TableCell>
@@ -743,10 +548,7 @@ export default function UsersPage() {
                     <TableRow key={row.id}>
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
                     </TableRow>
@@ -756,36 +558,151 @@ export default function UsersPage() {
             </Table>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <p>Halaman {page}</p>
-              <span className="text-border">•</span>
-              <p>Total {usersQuery.data?.pagination.total ?? 0} data</p>
-            </div>
-            <div className="flex items-center gap-2">
+          {/* Pagination */}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {total} data · hal. {page}/{totalPages}
+            </p>
+            <div className="flex items-center gap-1">
               <Button
                 variant="outline"
+                size="icon"
+                className="h-8 w-8"
                 disabled={page <= 1 || usersQuery.isFetching}
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                title="Halaman sebelumnya"
               >
-                Sebelumnya
+                <ChevronLeft className="h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
+                size="icon"
+                className="h-8 w-8"
                 disabled={page >= totalPages || usersQuery.isFetching}
-                onClick={() => setPage((prev) => prev + 1)}
+                onClick={() => setPage((p) => p + 1)}
+                title="Halaman selanjutnya"
               >
-                Selanjutnya
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* ── Dialog: Create / Edit ── */}
       <Dialog
-        open={canWrite && isResetDialogOpen}
+        open={isFormOpen}
         onOpenChange={(open) => {
-          setIsResetDialogOpen(open);
+          setIsFormOpen(open);
+          if (!open) {
+            setEditingUser(null);
+            createForm.reset();
+            updateForm.reset();
+            createMutation.reset();
+            updateMutation.reset();
+          }
+        }}
+      >
+        <DialogContent className="border-border bg-background sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{isEditing ? "Edit Pengguna" : "Tambah Pengguna"}</DialogTitle>
+            <DialogDescription>
+              {isEditing
+                ? "Perbarui profil pengguna. Kata sandi tidak berubah."
+                : "Isi data pengguna dan kata sandi awal."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {isEditing ? (
+            <form
+              className="space-y-4"
+              onSubmit={updateForm.handleSubmit((v) =>
+                void updateMutation.mutateAsync({ id: editingUser!.id, payload: v }),
+              )}
+            >
+              <div className="space-y-1.5">
+                <Label htmlFor="u-name">Nama</Label>
+                <Input id="u-name" {...updateForm.register("name")} />
+                {updateForm.formState.errors.name ? (
+                  <p className="text-xs text-destructive">{updateForm.formState.errors.name.message}</p>
+                ) : null}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="u-email">Email</Label>
+                <Input id="u-email" type="email" {...updateForm.register("email")} />
+                {updateForm.formState.errors.email ? (
+                  <p className="text-xs text-destructive">{updateForm.formState.errors.email.message}</p>
+                ) : null}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="u-role">Peran</Label>
+                <RoleSelect
+                  id="u-role"
+                  value={updateForm.watch("role")}
+                  onChange={(v) => updateForm.setValue("role", v, { shouldTouch: true, shouldValidate: true })}
+                />
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={updateMutation.isPending || !updateForm.formState.isValid}>
+                  {updateMutation.isPending ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" />Menyimpan...</>
+                  ) : "Simpan"}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : (
+            <form
+              className="space-y-4"
+              onSubmit={createForm.handleSubmit((v) =>
+                void createMutation.mutateAsync(v),
+              )}
+            >
+              <div className="space-y-1.5">
+                <Label htmlFor="c-name">Nama</Label>
+                <Input id="c-name" {...createForm.register("name")} />
+                {createForm.formState.errors.name ? (
+                  <p className="text-xs text-destructive">{createForm.formState.errors.name.message}</p>
+                ) : null}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="c-email">Email</Label>
+                <Input id="c-email" type="email" {...createForm.register("email")} />
+                {createForm.formState.errors.email ? (
+                  <p className="text-xs text-destructive">{createForm.formState.errors.email.message}</p>
+                ) : null}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="c-role">Peran</Label>
+                <RoleSelect
+                  id="c-role"
+                  value={createForm.watch("role")}
+                  onChange={(v) => createForm.setValue("role", v, { shouldTouch: true, shouldValidate: true })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="c-password">Kata Sandi Awal</Label>
+                <Input id="c-password" type="password" {...createForm.register("password")} />
+                {createForm.formState.errors.password ? (
+                  <p className="text-xs text-destructive">{createForm.formState.errors.password.message}</p>
+                ) : null}
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={createMutation.isPending || !createForm.formState.isValid}>
+                  {createMutation.isPending ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" />Menyimpan...</>
+                  ) : "Simpan"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Reset password ── */}
+      <Dialog
+        open={isResetOpen}
+        onOpenChange={(open) => {
+          setIsResetOpen(open);
           if (!open) {
             setResetTarget(null);
             resetForm.reset();
@@ -793,88 +710,68 @@ export default function UsersPage() {
           }
         }}
       >
-        <DialogContent className="border-border bg-background">
+        <DialogContent className="border-border bg-background sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Atur Ulang Kata Sandi Pengguna</DialogTitle>
+            <DialogTitle>Atur Ulang Kata Sandi</DialogTitle>
             <DialogDescription>
-              {resetTarget
-                ? `Set password baru untuk ${resetTarget.name}.`
-                : "Setel kata sandi baru pengguna."}
+              Kata sandi baru untuk{" "}
+              <span className="font-medium text-foreground">{resetTarget?.name}</span>.
             </DialogDescription>
           </DialogHeader>
-          <form className="space-y-4" onSubmit={handleResetPassword}>
-            <div className="space-y-2">
-              <Label htmlFor="reset_password">Kata Sandi Baru</Label>
-              <Input
-                id="reset_password"
-                type="password"
-                {...resetForm.register("new_password")}
-              />
+          <form
+            className="space-y-4"
+            onSubmit={resetForm.handleSubmit((v) =>
+              void resetPasswordMutation.mutateAsync({ id: resetTarget!.id, payload: v }),
+            )}
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="r-password">Kata Sandi Baru</Label>
+              <Input id="r-password" type="password" {...resetForm.register("new_password")} />
               {resetForm.formState.errors.new_password ? (
-                <p className="text-sm text-danger" role="alert">
-                  {resetForm.formState.errors.new_password.message}
-                </p>
+                <p className="text-xs text-destructive">{resetForm.formState.errors.new_password.message}</p>
               ) : null}
             </div>
             <DialogFooter>
-              <Button
-                type="submit"
-                disabled={
-                  resetPasswordMutation.isPending ||
-                  !resetForm.formState.isValid
-                }
-              >
+              <Button type="submit" disabled={resetPasswordMutation.isPending || !resetForm.formState.isValid}>
                 {resetPasswordMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Menyimpan...
-                  </>
-                ) : (
-                  "Atur Ulang Kata Sandi"
-                )}
+                  <><Loader2 className="h-4 w-4 animate-spin" />Menyimpan...</>
+                ) : "Atur Ulang"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
+      {/* ── Dialog: Konfirmasi hapus ── */}
       <AlertDialog
-        open={canWrite && Boolean(deleteTarget)}
+        open={Boolean(deleteTarget)}
         onOpenChange={(open) => {
           if (!open) {
             setDeleteTarget(null);
-            deleteUserMutation.reset();
+            deleteMutation.reset();
           }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus pengguna</AlertDialogTitle>
+            <AlertDialogTitle>Hapus Pengguna</AlertDialogTitle>
             <AlertDialogDescription>
-              Pengguna{" "}
-              <span className="font-medium text-foreground">
-                {deleteTarget?.name}
-              </span>{" "}
-              akan dihapus (soft-delete) dan sesi login pengguna tersebut akan
-              ditutup.
+              <span className="font-medium text-foreground">{deleteTarget?.name}</span>{" "}
+              akan dihapus dan semua sesi login-nya akan ditutup.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteUserMutation.isPending}>
-              Batal
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Batal</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={!deleteTarget || deleteUserMutation.isPending}
-              onClick={(event) => {
-                event.preventDefault();
-                if (!deleteTarget) {
-                  return;
-                }
-                void deleteUserMutation.mutateAsync(deleteTarget.id);
+              disabled={!deleteTarget || deleteMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (!deleteTarget) return;
+                void deleteMutation.mutateAsync(deleteTarget.id);
               }}
             >
-              {deleteUserMutation.isPending ? "Menghapus..." : "Ya, hapus"}
+              {deleteMutation.isPending ? "Menghapus..." : "Hapus"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

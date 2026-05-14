@@ -16,8 +16,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import type { PlayerItem, PlayerFormValues } from "../services/players";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PLAYER_POSITIONS, type PlayerItem, type PlayerFormValues } from "../services/players";
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -37,7 +43,6 @@ export const playerSchema = z.object({
       message: "Kebangsaan minimal 2 karakter",
     }),
   primary_position: z.string().trim().min(2, "Posisi utama minimal 2 karakter"),
-  join_date: z.iso.date("Format tanggal bergabung harus YYYY-MM-DD"),
 });
 
 type PlayerSchemaInput = z.input<typeof playerSchema>;
@@ -72,7 +77,6 @@ export function PlayerFormDialog({
       date_of_birth: "",
       nationality: "",
       primary_position: "",
-      join_date: "",
     },
     mode: "onTouched",
   });
@@ -84,7 +88,6 @@ export function PlayerFormDialog({
         date_of_birth: editingPlayer.date_of_birth,
         nationality: editingPlayer.nationality ?? "",
         primary_position: editingPlayer.primary_position,
-        join_date: "",
       });
     } else {
       form.reset({
@@ -92,7 +95,6 @@ export function PlayerFormDialog({
         date_of_birth: "",
         nationality: "",
         primary_position: "",
-        join_date: "",
       });
     }
   }, [editingPlayer, form]);
@@ -172,11 +174,26 @@ export function PlayerFormDialog({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="pf-position">Posisi Utama</Label>
-              <Input
-                id="pf-position"
-                placeholder="Center Back"
-                {...form.register("primary_position")}
-              />
+              <Select
+                value={form.watch("primary_position")}
+                onValueChange={(v) =>
+                  form.setValue("primary_position", v, {
+                    shouldTouch: true,
+                    shouldValidate: true,
+                  })
+                }
+              >
+                <SelectTrigger id="pf-position">
+                  <SelectValue placeholder="Pilih posisi..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {PLAYER_POSITIONS.map((pos) => (
+                    <SelectItem key={pos.value} value={pos.value}>
+                      {pos.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {form.formState.errors.primary_position ? (
                 <p className="text-xs text-destructive" role="alert">
                   {form.formState.errors.primary_position.message}
@@ -202,25 +219,7 @@ export function PlayerFormDialog({
             ) : null}
           </div>
 
-          {/* Tanggal bergabung — hanya saat create */}
-          {!isEditing ? (
-            <>
-              <Separator />
-              <div className="space-y-1.5">
-                <Label htmlFor="pf-join-date">Tanggal Bergabung</Label>
-                <Input
-                  id="pf-join-date"
-                  type="date"
-                  {...form.register("join_date")}
-                />
-                {form.formState.errors.join_date ? (
-                  <p className="text-xs text-destructive" role="alert">
-                    {form.formState.errors.join_date.message}
-                  </p>
-                ) : null}
-              </div>
-            </>
-          ) : null}
+          {/* Tanggal bergabung dihapus — diisi otomatis dengan tanggal hari ini */}
 
           <DialogFooter>
             <Button

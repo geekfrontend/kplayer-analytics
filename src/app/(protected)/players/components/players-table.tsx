@@ -6,7 +6,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import { BarChart2, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -16,34 +16,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { PlayerItem } from "../services/players";
+import type { PlayerItem, PlayerStats } from "../services/players";
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function PlayersTableSkeleton({ canWrite }: { canWrite: boolean }) {
-  const colCount = canWrite ? 6 : 5;
   return (
     <>
       {Array.from({ length: 5 }).map((_, i) => (
         <TableRow key={i}>
-          <TableCell>
-            <div className="h-4 w-32 animate-pulse rounded bg-muted" />
-          </TableCell>
-          <TableCell>
-            <div className="h-4 w-16 animate-pulse rounded bg-muted" />
-          </TableCell>
-          <TableCell>
-            <div className="h-4 w-20 animate-pulse rounded bg-muted" />
-          </TableCell>
-          <TableCell>
-            <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-          </TableCell>
-          <TableCell>
-            <div className="h-4 w-20 animate-pulse rounded bg-muted" />
-          </TableCell>
+          <TableCell><div className="h-4 w-32 animate-pulse rounded bg-muted" /></TableCell>
+          <TableCell><div className="h-4 w-10 animate-pulse rounded bg-muted" /></TableCell>
+          <TableCell><div className="h-4 w-20 animate-pulse rounded bg-muted" /></TableCell>
+          {/* Stats columns */}
+          <TableCell><div className="h-4 w-8 animate-pulse rounded bg-muted" /></TableCell>
+          <TableCell><div className="h-4 w-8 animate-pulse rounded bg-muted" /></TableCell>
+          <TableCell><div className="h-4 w-12 animate-pulse rounded bg-muted" /></TableCell>
           {canWrite ? (
             <TableCell>
               <div className="flex justify-end gap-1">
+                <div className="h-6 w-6 animate-pulse rounded bg-muted" />
                 <div className="h-6 w-6 animate-pulse rounded bg-muted" />
                 <div className="h-6 w-6 animate-pulse rounded bg-muted" />
               </div>
@@ -55,12 +47,22 @@ function PlayersTableSkeleton({ canWrite }: { canWrite: boolean }) {
   );
 }
 
+// ─── Stat cell ────────────────────────────────────────────────────────────────
+
+function StatCell({ value }: { value: number | undefined }) {
+  if (value === undefined) {
+    return <span className="text-xs text-muted-foreground/40">—</span>;
+  }
+  return <span className="tabular-nums text-muted-foreground">{value}</span>;
+}
+
 // ─── Table ────────────────────────────────────────────────────────────────────
 
 const columnHelper = createColumnHelper<PlayerItem>();
 
 type PlayersTableProps = {
   rows: PlayerItem[];
+  statsMap: Map<string, PlayerStats>;
   isLoading: boolean;
   isFetching: boolean;
   canWrite: boolean;
@@ -69,11 +71,13 @@ type PlayersTableProps = {
   totalPages: number;
   onEdit: (player: PlayerItem) => void;
   onDelete: (player: PlayerItem) => void;
+  onStats: (player: PlayerItem) => void;
   onPageChange: (page: number) => void;
 };
 
 export function PlayersTable({
   rows,
+  statsMap,
   isLoading,
   isFetching,
   canWrite,
@@ -82,9 +86,10 @@ export function PlayersTable({
   totalPages,
   onEdit,
   onDelete,
+  onStats,
   onPageChange,
 }: PlayersTableProps) {
-  const colCount = canWrite ? 6 : 5;
+  const colCount = canWrite ? 7 : 6;
 
   const columns = [
     columnHelper.accessor("full_name", {
@@ -94,9 +99,11 @@ export function PlayersTable({
       ),
     }),
     columnHelper.accessor("primary_position", {
-      header: "Posisi",
+      header: "Pos.",
       cell: (info) => (
-        <span className="text-muted-foreground">{info.getValue()}</span>
+        <span className="text-xs font-medium text-muted-foreground">
+          {info.getValue()}
+        </span>
       ),
     }),
     columnHelper.accessor("nationality", {
@@ -105,18 +112,26 @@ export function PlayersTable({
         <span className="text-muted-foreground">{info.getValue() ?? "—"}</span>
       ),
     }),
-    columnHelper.accessor("date_of_birth", {
-      header: "Tgl. Lahir",
-      cell: (info) => (
-        <span className="text-muted-foreground">{info.getValue()}</span>
+    // ─── Kolom statistik ──────────────────────────────────────────────────────
+    columnHelper.display({
+      id: "goals",
+      header: () => <span className="text-xs">Gol</span>,
+      cell: ({ row }) => (
+        <StatCell value={statsMap.get(row.original.id)?.goals} />
       ),
     }),
-    columnHelper.accessor("updated_at", {
-      header: "Diperbarui",
-      cell: (info) => (
-        <span className="text-muted-foreground">
-          {info.getValue().slice(0, 10)}
-        </span>
+    columnHelper.display({
+      id: "assists",
+      header: () => <span className="text-xs">Assist</span>,
+      cell: ({ row }) => (
+        <StatCell value={statsMap.get(row.original.id)?.assists} />
+      ),
+    }),
+    columnHelper.display({
+      id: "minutes",
+      header: () => <span className="text-xs">Menit</span>,
+      cell: ({ row }) => (
+        <StatCell value={statsMap.get(row.original.id)?.minutes_played} />
       ),
     }),
     ...(canWrite
@@ -126,6 +141,16 @@ export function PlayersTable({
             header: "",
             cell: ({ row }) => (
               <div className="flex justify-end gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-primary"
+                  title="Kelola statistik"
+                  onClick={() => onStats(row.original)}
+                >
+                  <BarChart2 className="h-3.5 w-3.5" />
+                </Button>
                 <Button
                   type="button"
                   variant="ghost"

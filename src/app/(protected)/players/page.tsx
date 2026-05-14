@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   keepPreviousData,
   useMutation,
@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isApiClientError } from "@/lib/api-client";
 import { DeletePlayerDialog } from "./components/delete-player-dialog";
 import { PlayerFormDialog } from "./components/player-form-dialog";
+import { PlayerStatsDialog } from "./components/player-stats-dialog";
 import { PlayersFilterBar } from "./components/players-filter-bar";
 import { PlayersTable } from "./components/players-table";
 import {
@@ -22,11 +23,14 @@ import {
   deletePlayer,
   fetchClubOptionsBySeason,
   fetchPlayers,
+  fetchStatsBySeasonAndClub,
   playersKeys,
+  playerStatsByScopeKeys,
   updatePlayer,
   type ClubOption,
   type PlayerFormValues,
   type PlayerItem,
+  type PlayerStats,
 } from "./services/players";
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -48,6 +52,7 @@ export default function PlayersPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<PlayerItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PlayerItem | null>(null);
+  const [statsTarget, setStatsTarget] = useState<PlayerItem | null>(null);
 
   // ─── Queries ────────────────────────────────────────────────────────────────
 
@@ -80,6 +85,27 @@ export default function PlayersPage() {
     queryFn: () =>
       fetchPlayers(page, q, selectedClubId, activeSeason?.id ?? ""),
   });
+
+  // Fetch statistik untuk semua pemain di musim + klub aktif
+  const statsQuery = useQuery({
+    queryKey: playerStatsByScopeKeys.bySeasonClub(
+      activeSeason?.id ?? "",
+      selectedClubId,
+    ),
+    enabled: Boolean(activeSeason?.id) && Boolean(selectedClubId),
+    staleTime: 30_000,
+    queryFn: () =>
+      fetchStatsBySeasonAndClub(activeSeason!.id, selectedClubId),
+  });
+
+  // Map player_id → stats untuk lookup O(1) di tabel
+  const statsMap = useMemo(() => {
+    const map = new Map<string, PlayerStats>();
+    for (const s of statsQuery.data ?? []) {
+      map.set(s.player_id, s);
+    }
+    return map;
+  }, [statsQuery.data]);
 
   // Fetcher untuk AsyncSelect klub — pakai cache dari clubOptionsQuery
   const clubFetcher = useCallback(
@@ -225,6 +251,7 @@ export default function PlayersPage() {
 
           <PlayersTable
             rows={playersQuery.data?.items ?? []}
+            statsMap={statsMap}
             isLoading={playersQuery.isLoading}
             isFetching={playersQuery.isFetching}
             canWrite={canWrite}
@@ -233,6 +260,7 @@ export default function PlayersPage() {
             totalPages={totalPages}
             onEdit={handleEditClick}
             onDelete={setDeleteTarget}
+            onStats={setStatsTarget}
             onPageChange={setPage}
           />
         </CardContent>
@@ -258,6 +286,18 @@ export default function PlayersPage() {
           }
         }}
         onConfirm={(id) => void deleteMutation.mutateAsync(id)}
+      />
+
+      <PlayerStatsDialog
+        open={Boolean(statsTarget)}
+        player={statsTarget}
+        seasonId={activeSeason?.id ?? ""}
+        seasonName={activeSeason?.name ?? ""}
+        clubId={selectedClubId}
+        clubName={selectedClubName}
+        onOpenChange={(open) => {
+          if (!open) setStatsTarget(null);
+        }}
       />
     </section>
   );

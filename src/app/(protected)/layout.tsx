@@ -230,9 +230,7 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
                       <span className="text-sm font-semibold leading-none">
                         KPlayer Analytics
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        Ruang Kerja Analitik
-                      </span>
+                    
                     </div>
                   </div>
 
