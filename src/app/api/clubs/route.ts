@@ -4,7 +4,6 @@ import { z } from "zod";
 import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
-import { getDbErrorCode, PG_UNIQUE_VIOLATION } from "@/app/api/utils/db-error";
 import { RouteHandler } from "@/app/api/utils/route-handler";
 import { nowIsoString, orm } from "@/db/postgres";
 import { clubs } from "@/db/schema";
@@ -79,21 +78,14 @@ export const POST = RouteHandler(async (req) => {
 
   const id = randomUUID();
   const now = nowIsoString();
-  try {
-    await orm
-      .insert(clubs)
-      .values({
-        id,
-        name: parsed.data.name,
-        created_at: now,
-        updated_at: now,
-      });
-  } catch (error) {
-    if (getDbErrorCode(error) === PG_UNIQUE_VIOLATION) {
-      throw ApiError.conflict("Klub sudah terdaftar");
-    }
-    throw error;
-  }
+  await orm
+    .insert(clubs)
+    .values({
+      id,
+      name: parsed.data.name,
+      created_at: now,
+      updated_at: now,
+    });
 
   return ApiResponse.created("Klub berhasil dibuat", {
     id,

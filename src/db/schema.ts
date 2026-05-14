@@ -35,22 +35,28 @@ export const leagues = pgTable("leagues", {
   updated_at: text("updated_at").notNull(),
 });
 
-export const seasons = pgTable("seasons", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  league_id: text("league_id").references(() => leagues.id, {
-    onDelete: "restrict",
-  }),
-  start_date: text("start_date").notNull(),
-  end_date: text("end_date").notNull(),
-  is_active: integer("is_active").notNull().default(0),
-  created_at: text("created_at").notNull(),
-  updated_at: text("updated_at").notNull(),
-});
+export const seasons = pgTable(
+  "seasons",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    league_id: text("league_id").references(() => leagues.id, {
+      onDelete: "restrict",
+    }),
+    start_date: text("start_date").notNull(),
+    end_date: text("end_date").notNull(),
+    is_active: integer("is_active").notNull().default(0),
+    created_at: text("created_at").notNull(),
+    updated_at: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("uq_seasons_name_league").on(table.name, table.league_id),
+  ],
+);
 
 export const clubs = pgTable("clubs", {
   id: text("id").primaryKey(),
-  name: text("name").notNull().unique(),
+  name: text("name").notNull(),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
 });

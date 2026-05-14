@@ -139,7 +139,11 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     await orm.update(seasons).set(updates).where(eq(seasons.id, seasonId));
   } catch (error) {
     if (getDbErrorCode(error) === PG_UNIQUE_VIOLATION) {
-      throw ApiError.conflict("Musim sudah terdaftar");
+      throw ApiError.conflict(
+        updates.league_id
+          ? "Musim dengan nama tersebut sudah terdaftar untuk liga ini"
+          : "Musim sudah terdaftar",
+      );
     }
     throw error;
   }

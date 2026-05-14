@@ -136,7 +136,11 @@ export const POST = RouteHandler(async (req) => {
     });
   } catch (error) {
     if (getDbErrorCode(error) === PG_UNIQUE_VIOLATION) {
-      throw ApiError.conflict("Musim sudah terdaftar");
+      throw ApiError.conflict(
+        parsed.data.league_id
+          ? "Musim dengan nama tersebut sudah terdaftar untuk liga ini"
+          : "Musim sudah terdaftar",
+      );
     }
     throw error;
   }

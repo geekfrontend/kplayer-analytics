@@ -3,7 +3,6 @@ import { z } from "zod";
 import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
-import { getDbErrorCode, PG_UNIQUE_VIOLATION } from "@/app/api/utils/db-error";
 import { RouteHandler } from "@/app/api/utils/route-handler";
 import { nowIsoString, orm } from "@/db/postgres";
 import { clubs } from "@/db/schema";
@@ -81,14 +80,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     updates.name = parsed.data.name;
   }
 
-  try {
-    await orm.update(clubs).set(updates).where(eq(clubs.id, clubId));
-  } catch (error) {
-    if (getDbErrorCode(error) === PG_UNIQUE_VIOLATION) {
-      throw ApiError.conflict("Klub sudah terdaftar");
-    }
-    throw error;
-  }
+  await orm.update(clubs).set(updates).where(eq(clubs.id, clubId));
 
   const [club] = await orm
     .select({
