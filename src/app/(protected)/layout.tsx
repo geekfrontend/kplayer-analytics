@@ -157,9 +157,6 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
       { href: "/", label: "Dasbor" },
       { href: "/clubs", label: "Klub" },
       { href: "/players", label: "Pemain" },
-      { href: "/season-clubs", label: "Relasi Musim Klub" },
-      { href: "/assignments", label: "Penugasan" },
-      { href: "/player-stats", label: "Statistik Pemain" },
     ];
 
     if (user?.role === "admin") {
