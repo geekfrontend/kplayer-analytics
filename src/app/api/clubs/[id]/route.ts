@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
@@ -27,6 +27,9 @@ async function parseClubId(params: Promise<Record<string, string>>) {
   return parsed.data.id;
 }
 
+const activeClub = (id: string) =>
+  and(eq(clubs.id, id), isNull(clubs.deleted_at));
+
 export const GET = RouteHandler(async (req, ctx) => {
   await requireAuth(req);
   const clubId = await parseClubId(ctx.params);
@@ -39,7 +42,7 @@ export const GET = RouteHandler(async (req, ctx) => {
       updated_at: clubs.updated_at,
     })
     .from(clubs)
-    .where(eq(clubs.id, clubId))
+    .where(activeClub(clubId))
     .limit(1);
 
   if (!club) {
@@ -62,17 +65,14 @@ export const PATCH = RouteHandler(async (req, ctx) => {
   const [existing] = await orm
     .select({ id: clubs.id })
     .from(clubs)
-    .where(eq(clubs.id, clubId))
+    .where(activeClub(clubId))
     .limit(1);
 
   if (!existing) {
     throw ApiError.notFound("Klub tidak ditemukan");
   }
 
-  const updates: {
-    name?: string;
-    updated_at: string;
-  } = {
+  const updates: { name?: string; updated_at: string } = {
     updated_at: nowIsoString(),
   };
 
@@ -90,7 +90,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
       updated_at: clubs.updated_at,
     })
     .from(clubs)
-    .where(eq(clubs.id, clubId))
+    .where(activeClub(clubId))
     .limit(1);
 
   return ApiResponse.ok("Klub berhasil diperbarui", { club });
@@ -101,10 +101,21 @@ export const DELETE = RouteHandler(async (req, ctx) => {
   requireRole(user, ["admin"]);
   const clubId = await parseClubId(ctx.params);
 
-  const result = await orm.delete(clubs).where(eq(clubs.id, clubId));
-  if ((result.rowCount ?? 0) < 1) {
+  const [existing] = await orm
+    .select({ id: clubs.id })
+    .from(clubs)
+    .where(activeClub(clubId))
+    .limit(1);
+
+  if (!existing) {
     throw ApiError.notFound("Klub tidak ditemukan");
   }
+
+  const now = nowIsoString();
+  await orm
+    .update(clubs)
+    .set({ deleted_at: now, updated_at: now })
+    .where(eq(clubs.id, clubId));
 
   return ApiResponse.ok("Klub berhasil dihapus");
 });

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
@@ -29,6 +29,9 @@ async function parseLeagueId(params: Promise<Record<string, string>>) {
   return parsed.data.id;
 }
 
+const activeLeague = (id: string) =>
+  and(eq(leagues.id, id), isNull(leagues.deleted_at));
+
 export const GET = RouteHandler(async (req, ctx) => {
   await requireAuth(req);
   const leagueId = await parseLeagueId(ctx.params);
@@ -42,7 +45,7 @@ export const GET = RouteHandler(async (req, ctx) => {
       updated_at: leagues.updated_at,
     })
     .from(leagues)
-    .where(eq(leagues.id, leagueId))
+    .where(activeLeague(leagueId))
     .limit(1);
 
   if (!league) {
@@ -65,7 +68,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
   const [existing] = await orm
     .select({ id: leagues.id })
     .from(leagues)
-    .where(eq(leagues.id, leagueId))
+    .where(activeLeague(leagueId))
     .limit(1);
 
   if (!existing) {
@@ -79,7 +82,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
   if (parsed.data.country) updates.country = parsed.data.country;
 
   try {
-    await orm.update(leagues).set(updates).where(eq(leagues.id, leagueId));
+    await orm.update(leagues).set(updates).where(activeLeague(leagueId));
   } catch (error) {
     if (getDbErrorCode(error) === PG_UNIQUE_VIOLATION) {
       throw ApiError.conflict("Liga sudah terdaftar");
@@ -96,7 +99,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
       updated_at: leagues.updated_at,
     })
     .from(leagues)
-    .where(eq(leagues.id, leagueId))
+    .where(activeLeague(leagueId))
     .limit(1);
 
   return ApiResponse.ok("Liga berhasil diperbarui", { league });
@@ -107,10 +110,21 @@ export const DELETE = RouteHandler(async (req, ctx) => {
   requireRole(user, ["admin"]);
   const leagueId = await parseLeagueId(ctx.params);
 
-  const result = await orm.delete(leagues).where(eq(leagues.id, leagueId));
-  if ((result.rowCount ?? 0) < 1) {
+  const [existing] = await orm
+    .select({ id: leagues.id })
+    .from(leagues)
+    .where(activeLeague(leagueId))
+    .limit(1);
+
+  if (!existing) {
     throw ApiError.notFound("Liga tidak ditemukan");
   }
+
+  const now = nowIsoString();
+  await orm
+    .update(leagues)
+    .set({ deleted_at: now, updated_at: now })
+    .where(eq(leagues.id, leagueId));
 
   return ApiResponse.ok("Liga berhasil dihapus");
 });

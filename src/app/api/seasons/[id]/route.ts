@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
@@ -51,6 +51,9 @@ async function parseSeasonId(params: Promise<Record<string, string>>) {
   return parsed.data.id;
 }
 
+const activeSeason = (id: string) =>
+  and(eq(seasons.id, id), isNull(seasons.deleted_at));
+
 function selectSeasonWithLeague(seasonId: string) {
   return orm
     .select({
@@ -67,7 +70,7 @@ function selectSeasonWithLeague(seasonId: string) {
     })
     .from(seasons)
     .leftJoin(leagues, eq(seasons.league_id, leagues.id))
-    .where(eq(seasons.id, seasonId))
+    .where(activeSeason(seasonId))
     .limit(1);
 }
 
@@ -97,7 +100,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
   const [existing] = await orm
     .select({ id: seasons.id })
     .from(seasons)
-    .where(eq(seasons.id, seasonId))
+    .where(activeSeason(seasonId))
     .limit(1);
 
   if (!existing) {
@@ -109,7 +112,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
     const [league] = await orm
       .select({ id: leagues.id })
       .from(leagues)
-      .where(eq(leagues.id, parsed.data.league_id))
+      .where(and(eq(leagues.id, parsed.data.league_id), isNull(leagues.deleted_at)))
       .limit(1);
     if (!league) {
       throw ApiError.badRequest("Liga tidak ditemukan");
@@ -158,10 +161,21 @@ export const DELETE = RouteHandler(async (req, ctx) => {
   requireRole(user, ["admin"]);
   const seasonId = await parseSeasonId(ctx.params);
 
-  const result = await orm.delete(seasons).where(eq(seasons.id, seasonId));
-  if ((result.rowCount ?? 0) < 1) {
+  const [existing] = await orm
+    .select({ id: seasons.id })
+    .from(seasons)
+    .where(activeSeason(seasonId))
+    .limit(1);
+
+  if (!existing) {
     throw ApiError.notFound("Musim tidak ditemukan");
   }
+
+  const now = nowIsoString();
+  await orm
+    .update(seasons)
+    .set({ deleted_at: now, updated_at: now })
+    .where(eq(seasons.id, seasonId));
 
   return ApiResponse.ok("Musim berhasil dihapus");
 });

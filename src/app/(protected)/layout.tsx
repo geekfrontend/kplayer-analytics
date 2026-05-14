@@ -155,7 +155,6 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const navItems = useMemo<NavItem[]>(() => {
     const items: NavItem[] = [
       { href: "/", label: "Dasbor" },
-      { href: "/leagues", label: "Liga" },
       { href: "/clubs", label: "Klub" },
       { href: "/players", label: "Pemain" },
       { href: "/season-clubs", label: "Relasi Musim Klub" },

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, count, desc, eq, like, SQL } from "drizzle-orm";
+import { and, count, desc, eq, isNull, like, SQL } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
@@ -53,15 +53,14 @@ export const GET = RouteHandler(async (req) => {
 
   const { page, limit, q, league_id } = parsedQuery.data;
   const offset = (page - 1) * limit;
-  const whereConditions: SQL[] = [];
+  const whereConditions: SQL[] = [isNull(seasons.deleted_at)];
   if (q) {
     whereConditions.push(like(seasons.name, `%${q}%`));
   }
   if (league_id) {
     whereConditions.push(eq(seasons.league_id, league_id));
   }
-  const whereClause =
-    whereConditions.length > 0 ? and(...whereConditions) : undefined;
+  const whereClause = and(...whereConditions);
 
   const items = await orm
     .select({
@@ -113,7 +112,7 @@ export const POST = RouteHandler(async (req) => {
     const [league] = await orm
       .select({ id: leagues.id })
       .from(leagues)
-      .where(eq(leagues.id, parsed.data.league_id))
+      .where(and(eq(leagues.id, parsed.data.league_id), isNull(leagues.deleted_at)))
       .limit(1);
     if (!league) {
       throw ApiError.badRequest("Liga tidak ditemukan");

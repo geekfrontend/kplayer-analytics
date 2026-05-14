@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, count, desc, like, SQL } from "drizzle-orm";
+import { and, count, desc, isNull, like, SQL } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError } from "@/app/api/utils/api-error";
 import { ApiResponse } from "@/app/api/utils/api-response";
@@ -34,12 +34,11 @@ export const GET = RouteHandler(async (req) => {
 
   const { page, limit, q } = parsedQuery.data;
   const offset = (page - 1) * limit;
-  const whereConditions: SQL[] = [];
+  const whereConditions: SQL[] = [isNull(leagues.deleted_at)];
   if (q) {
     whereConditions.push(like(leagues.name, `%${q}%`));
   }
-  const whereClause =
-    whereConditions.length > 0 ? and(...whereConditions) : undefined;
+  const whereClause = and(...whereConditions);
 
   const items = await orm
     .select({

@@ -33,6 +33,7 @@ export const leagues = pgTable("leagues", {
   country: text("country").notNull(),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
+  deleted_at: text("deleted_at"),
 });
 
 export const seasons = pgTable(
@@ -48,6 +49,7 @@ export const seasons = pgTable(
     is_active: integer("is_active").notNull().default(0),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),
+    deleted_at: text("deleted_at"),
   },
   (table) => [
     uniqueIndex("uq_seasons_name_league").on(table.name, table.league_id),
@@ -59,6 +61,7 @@ export const clubs = pgTable("clubs", {
   name: text("name").notNull(),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
+  deleted_at: text("deleted_at"),
 });
 
 export const players = pgTable("players", {
