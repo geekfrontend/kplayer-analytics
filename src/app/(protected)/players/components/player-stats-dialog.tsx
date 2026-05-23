@@ -35,15 +35,12 @@ const statsSchema = z
   .object({
     goals: z.coerce
       .number()
-      .int()
       .min(0, "Minimal 0"),
     assists: z.coerce
       .number()
-      .int()
       .min(0, "Minimal 0"),
     shots: z.coerce
       .number()
-      .int()
       .min(0, "Minimal 0"),
   })
   .refine((v) => v.shots >= v.goals, {
@@ -184,6 +181,7 @@ export function PlayerStatsDialog({
                   id="ps-goals"
                   type="number"
                   min={0}
+                  step="any"
                   {...form.register("goals")}
                 />
                 {form.formState.errors.goals ? (
@@ -199,6 +197,7 @@ export function PlayerStatsDialog({
                   id="ps-assists"
                   type="number"
                   min={0}
+                  step="any"
                   {...form.register("assists")}
                 />
                 {form.formState.errors.assists ? (
@@ -214,6 +213,7 @@ export function PlayerStatsDialog({
                   id="ps-shots"
                   type="number"
                   min={0}
+                  step="any"
                   {...form.register("shots")}
                 />
                 {form.formState.errors.shots ? (

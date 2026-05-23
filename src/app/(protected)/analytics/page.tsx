@@ -52,8 +52,6 @@ export default function AnalyticsPage() {
 
   const [selectedClubId, setSelectedClubId] = useState("");
   const [selectedClubName, setSelectedClubName] = useState("");
-  const [k, setK] = useState(3);
-  const [maxIter, setMaxIter] = useState(100);
 
   // Bump untuk trigger refetch saat user klik "Jalankan Ulang"
   const [runVersion, setRunVersion] = useState(0);
@@ -92,8 +90,8 @@ export default function AnalyticsPage() {
       seasonId: activeSeason?.id ?? "",
       clubId: selectedClubId,
       leagueId: activeLeague?.id ?? "",
-      k,
-      maxIter,
+      k: 3,
+      maxIter: 100,
       includeSteps: true,
     }),
     enabled: Boolean(activeSeason?.id),
@@ -103,8 +101,8 @@ export default function AnalyticsPage() {
         seasonId: activeSeason?.id,
         clubId: selectedClubId || undefined,
         leagueId: activeLeague?.id,
-        k,
-        maxIter,
+        k: 3,
+        maxIter: 100,
         includeSteps: true,
       }),
   });
@@ -189,9 +187,10 @@ export default function AnalyticsPage() {
             Clustering pemain berdasarkan{" "}
             <span className="font-medium">gol</span>,{" "}
             <span className="font-medium">assist</span>, dan{" "}
-            <span className="font-medium">tembakan</span>. Kluster dengan
-            rata-rata <span className="font-mono">performance score</span>{" "}
-            tertinggi diidentifikasi sebagai pemain dengan performa terbaik.
+            <span className="font-medium">tembakan</span> ke dalam 3 cluster.
+            Kluster dengan rata-rata{" "}
+            <span className="font-mono">performance score</span> tertinggi
+            diidentifikasi sebagai pemain dengan performa terbaik.
           </p>
         </CardHeader>
 
@@ -200,12 +199,8 @@ export default function AnalyticsPage() {
             seasonId={activeSeason?.id ?? ""}
             selectedClubId={selectedClubId}
             selectedClubName={selectedClubName}
-            k={k}
-            maxIter={maxIter}
             isFetching={isFetching}
             onClubChange={handleClubChange}
-            onKChange={setK}
-            onMaxIterChange={setMaxIter}
             onRunAgain={handleRunAgain}
           />
 

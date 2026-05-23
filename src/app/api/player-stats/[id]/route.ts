@@ -21,9 +21,9 @@ const paramsSchema = z.object({
 
 const updateSchema = z
   .object({
-    goals: z.coerce.number().int().min(0).optional(),
-    assists: z.coerce.number().int().min(0).optional(),
-    shots: z.coerce.number().int().min(0).optional(),
+    goals: z.coerce.number().min(0).optional(),
+    assists: z.coerce.number().min(0).optional(),
+    shots: z.coerce.number().min(0).optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "Minimal 1 field harus diisi",

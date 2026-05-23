@@ -29,9 +29,9 @@ const createSchema = z
     player_id: z.uuid("Format player_id tidak valid"),
     season_id: z.uuid("Format season_id tidak valid"),
     club_id: z.uuid("Format club_id tidak valid"),
-    goals: z.coerce.number().int().min(0),
-    assists: z.coerce.number().int().min(0),
-    shots: z.coerce.number().int().min(0),
+    goals: z.coerce.number().min(0),
+    assists: z.coerce.number().min(0),
+    shots: z.coerce.number().min(0),
   })
   .refine((data) => data.shots >= data.goals, {
     message: "shots tidak boleh lebih kecil dari goals",

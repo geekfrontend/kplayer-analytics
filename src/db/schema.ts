@@ -2,6 +2,7 @@ import {
   index,
   integer,
   pgTable,
+  real,
   text,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -138,9 +139,9 @@ export const player_stats = pgTable(
       .notNull()
       .references(() => clubs.id, { onDelete: "restrict" }),
     minutes_played: integer("minutes_played").notNull(),
-    goals: integer("goals").notNull(),
-    assists: integer("assists").notNull(),
-    shots: integer("shots").notNull(),
+    goals: real("goals").notNull(),
+    assists: real("assists").notNull(),
+    shots: real("shots").notNull(),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),
     created_by: text("created_by")
