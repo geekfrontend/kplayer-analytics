@@ -5,6 +5,8 @@
  * - API `/api/analytics/kmeans` (server-side untuk hasil akhir)
  * - Halaman `/analytics` (client-side juga untuk visualisasi)
  *
+ * Fitur yang digunakan untuk clustering: goals, assists, shots (3 variabel).
+ *
  * Fitur:
  * - K-Means++ initialization (lebih stabil dari random murni)
  * - Z-score normalization untuk fitur dengan skala berbeda
@@ -13,8 +15,8 @@
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-/** [goals, assists, shots, minutes_played] dalam unit asli atau z-score */
-export type Feature = readonly [number, number, number, number];
+/** [goals, assists, shots] dalam unit asli atau z-score */
+export type Feature = readonly [number, number, number];
 
 export type FeatureStats = {
   means: Feature;
@@ -73,13 +75,13 @@ export function stddev(values: number[], avg: number): number {
  */
 export function standardize(features: Feature[]): StandardizeResult {
   if (features.length === 0) {
-    const zero: Feature = [0, 0, 0, 0];
+    const zero: Feature = [0, 0, 0];
     return { standardized: [], means: zero, stds: zero };
   }
 
-  const cols: number[][] = [[], [], [], []];
+  const cols: number[][] = [[], [], []];
   for (const f of features) {
-    for (let i = 0; i < 4; i++) cols[i].push(f[i]);
+    for (let i = 0; i < 3; i++) cols[i].push(f[i]);
   }
 
   const means = cols.map(mean) as unknown as Feature;
@@ -94,7 +96,6 @@ export function standardize(features: Feature[]): StandardizeResult {
         (f[0] - means[0]) / stds[0],
         (f[1] - means[1]) / stds[1],
         (f[2] - means[2]) / stds[2],
-        (f[3] - means[3]) / stds[3],
       ] as Feature,
   );
 
@@ -107,7 +108,6 @@ export function denormalize(centroid: Feature, stats: FeatureStats): Feature {
     centroid[0] * stats.stds[0] + stats.means[0],
     centroid[1] * stats.stds[1] + stats.means[1],
     centroid[2] * stats.stds[2] + stats.means[2],
-    centroid[3] * stats.stds[3] + stats.means[3],
   ] as Feature;
 }
 
@@ -115,7 +115,7 @@ export function denormalize(centroid: Feature, stats: FeatureStats): Feature {
 
 export function squaredDistance(a: Feature, b: Feature): number {
   let d = 0;
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 3; i++) {
     const diff = a[i] - b[i];
     d += diff * diff;
   }
@@ -191,10 +191,10 @@ export function assignToCluster(point: Feature, centroids: Feature[]): number {
 }
 
 export function recomputeCentroid(points: Feature[]): Feature {
-  if (points.length === 0) return [0, 0, 0, 0] as unknown as Feature;
-  const sums = [0, 0, 0, 0];
+  if (points.length === 0) return [0, 0, 0] as unknown as Feature;
+  const sums = [0, 0, 0];
   for (const p of points) {
-    for (let i = 0; i < 4; i++) sums[i] += p[i];
+    for (let i = 0; i < 3; i++) sums[i] += p[i];
   }
   return sums.map((s) => s / points.length) as unknown as Feature;
 }
@@ -313,7 +313,7 @@ export function runKMeans(
  * di mayoritas fitur.
  */
 export function computePerformanceScore(zScores: Feature): number {
-  return zScores[0] + zScores[1] + zScores[2] + zScores[3];
+  return zScores[0] + zScores[1] + zScores[2];
 }
 
 /** Index cluster dengan rata-rata performance score tertinggi */

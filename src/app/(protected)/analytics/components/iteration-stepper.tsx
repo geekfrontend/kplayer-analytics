@@ -289,10 +289,7 @@ export function IterationStepper({
           <li>
             Fitur <span className="font-medium">{FEATURE_LABELS.goals}</span>,{" "}
             <span className="font-medium">{FEATURE_LABELS.assists}</span>,{" "}
-            <span className="font-medium">{FEATURE_LABELS.shots}</span>,{" "}
-            <span className="font-medium">
-              {FEATURE_LABELS.minutes_played}
-            </span>{" "}
+            <span className="font-medium">{FEATURE_LABELS.shots}</span>{" "}
             di-standarisasi (z-score) sebelum clustering.
           </li>
         </ul>

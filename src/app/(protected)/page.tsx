@@ -73,7 +73,7 @@ type StatsListResponse = {
   };
 };
 
-type SortBy = "goals" | "assists" | "minutes_played";
+type SortBy = "goals" | "assists";
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
 
@@ -296,14 +296,6 @@ export default function DashboardPage() {
     }),
     columnHelper.accessor("shots", {
       header: "Tembakan",
-      cell: (info) => (
-        <span className="tabular-nums text-muted-foreground">
-          {info.getValue()}
-        </span>
-      ),
-    }),
-    columnHelper.accessor("minutes_played", {
-      header: () => <SortHeader col="minutes_played" label="Menit" />,
       cell: (info) => (
         <span className="tabular-nums text-muted-foreground">
           {info.getValue()}

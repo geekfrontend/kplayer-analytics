@@ -6,7 +6,6 @@ export type FeatureValues = {
   goals: number;
   assists: number;
   shots: number;
-  minutes_played: number;
 };
 
 export type ClusterSummary = {
@@ -28,7 +27,6 @@ export type ClusteredPlayer = {
   goals: number;
   assists: number;
   shots: number;
-  minutes_played: number;
   cluster: number;
   performance_score: number;
 };
@@ -128,5 +126,4 @@ export const FEATURE_LABELS: Record<keyof FeatureValues, string> = {
   goals: "Gol",
   assists: "Assist",
   shots: "Tembakan",
-  minutes_played: "Menit",
 };

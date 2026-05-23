@@ -31,7 +31,7 @@ export function FeatureStatsPanel({
       <p className="text-xs text-muted-foreground">
         Sebelum clustering, tiap fitur di-standarisasi dengan{" "}
         <span className="font-mono">z = (x − μ) / σ</span> agar skala fitur
-        seperti menit (ribuan) tidak mendominasi gol (puluhan).
+        yang berbeda tidak mendominasi perhitungan jarak Euclidean.
       </p>
 
       <div className="overflow-x-auto">

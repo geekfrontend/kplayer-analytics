@@ -33,10 +33,6 @@ import {
 
 const statsSchema = z
   .object({
-    minutes_played: z.coerce
-      .number()
-      .int()
-      .min(0, "Minimal 0"),
     goals: z.coerce
       .number()
       .int()
@@ -91,7 +87,6 @@ export function PlayerStatsDialog({
   const form = useForm<StatsSchemaInput, unknown, PlayerStatsFormValues>({
     resolver: zodResolver(statsSchema),
     defaultValues: {
-      minutes_played: 0,
       goals: 0,
       assists: 0,
       shots: 0,
@@ -115,13 +110,12 @@ export function PlayerStatsDialog({
   useEffect(() => {
     if (statsQuery.data) {
       form.reset({
-        minutes_played: statsQuery.data.minutes_played,
         goals: statsQuery.data.goals,
         assists: statsQuery.data.assists,
         shots: statsQuery.data.shots,
       });
     } else if (!statsQuery.isLoading) {
-      form.reset({ minutes_played: 0, goals: 0, assists: 0, shots: 0 });
+      form.reset({ goals: 0, assists: 0, shots: 0 });
     }
   }, [statsQuery.data, statsQuery.isLoading, form]);
 
@@ -185,21 +179,6 @@ export function PlayerStatsDialog({
           >
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="ps-minutes">Menit Bermain</Label>
-                <Input
-                  id="ps-minutes"
-                  type="number"
-                  min={0}
-                  {...form.register("minutes_played")}
-                />
-                {form.formState.errors.minutes_played ? (
-                  <p className="text-xs text-destructive" role="alert">
-                    {form.formState.errors.minutes_played.message}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-1.5">
                 <Label htmlFor="ps-goals">Gol</Label>
                 <Input
                   id="ps-goals"
@@ -229,7 +208,7 @@ export function PlayerStatsDialog({
                 ) : null}
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 col-span-2">
                 <Label htmlFor="ps-shots">Tembakan</Label>
                 <Input
                   id="ps-shots"

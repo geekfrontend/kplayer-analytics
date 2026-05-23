@@ -176,7 +176,6 @@ export type PlayerStats = {
 };
 
 export type PlayerStatsFormValues = {
-  minutes_played: number;
   goals: number;
   assists: number;
   shots: number;

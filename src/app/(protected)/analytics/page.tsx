@@ -188,9 +188,8 @@ export default function AnalyticsPage() {
           <p className="text-sm text-muted-foreground">
             Clustering pemain berdasarkan{" "}
             <span className="font-medium">gol</span>,{" "}
-            <span className="font-medium">assist</span>,{" "}
-            <span className="font-medium">tembakan</span>, dan{" "}
-            <span className="font-medium">menit bermain</span>. Kluster dengan
+            <span className="font-medium">assist</span>, dan{" "}
+            <span className="font-medium">tembakan</span>. Kluster dengan
             rata-rata <span className="font-mono">performance score</span>{" "}
             tertinggi diidentifikasi sebagai pemain dengan performa terbaik.
           </p>
@@ -333,7 +332,7 @@ export default function AnalyticsPage() {
                       </li>
                       <li>
                         Hitung <span className="font-mono">performance_score</span>{" "}
-                        per pemain (sum z-score 4 fitur). Cluster dengan
+                        per pemain (sum z-score 3 fitur). Cluster dengan
                         rata-rata score tertinggi = top performer.
                       </li>
                     </ol>

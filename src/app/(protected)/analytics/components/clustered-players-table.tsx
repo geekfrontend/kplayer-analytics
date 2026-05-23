@@ -52,7 +52,7 @@ export function ClusteredPlayersTable({
           </p>
           <p className="text-xs text-muted-foreground">
             Pemain di cluster top performer berada di urutan teratas. Performance
-            score = jumlah z-score 4 fitur.
+            score = jumlah z-score 3 fitur.
           </p>
         </div>
 
@@ -91,7 +91,6 @@ export function ClusteredPlayersTable({
               <TableHead className="text-right">Gol</TableHead>
               <TableHead className="text-right">Assist</TableHead>
               <TableHead className="text-right">Tembakan</TableHead>
-              <TableHead className="text-right">Menit</TableHead>
               <TableHead className="text-right">Score</TableHead>
             </TableRow>
           </TableHeader>
@@ -99,7 +98,7 @@ export function ClusteredPlayersTable({
             {filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={9}
+                  colSpan={8}
                   className="py-6 text-center text-sm text-muted-foreground"
                 >
                   Tidak ada pemain di cluster ini.
@@ -148,9 +147,6 @@ export function ClusteredPlayersTable({
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
                       {p.shots}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {p.minutes_played}
                     </TableCell>
                     <TableCell className="text-right">
                       <span

@@ -21,7 +21,6 @@ const paramsSchema = z.object({
 
 const updateSchema = z
   .object({
-    minutes_played: z.coerce.number().int().min(0).optional(),
     goals: z.coerce.number().int().min(0).optional(),
     assists: z.coerce.number().int().min(0).optional(),
     shots: z.coerce.number().int().min(0).optional(),
@@ -157,7 +156,7 @@ export const PATCH = RouteHandler(async (req, ctx) => {
   }
 
   const nextState = {
-    minutes_played: parsed.data.minutes_played ?? existing.minutes_played,
+    minutes_played: 90,
     goals: parsed.data.goals ?? existing.goals,
     assists: parsed.data.assists ?? existing.assists,
     shots: parsed.data.shots ?? existing.shots,

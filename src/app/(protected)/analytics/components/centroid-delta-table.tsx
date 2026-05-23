@@ -25,7 +25,6 @@ const FEATURE_KEYS: (keyof FeatureValues)[] = [
   "goals",
   "assists",
   "shots",
-  "minutes_played",
 ];
 
 function DeltaCell({ delta }: { delta: number }) {

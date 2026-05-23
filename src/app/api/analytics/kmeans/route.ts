@@ -45,7 +45,6 @@ type StatRow = {
   goals: number;
   assists: number;
   shots: number;
-  minutes_played: number;
 };
 
 type ClusteredPlayer = StatRow & {
@@ -60,7 +59,6 @@ type ClusterSummary = {
     goals: number;
     assists: number;
     shots: number;
-    minutes_played: number;
   };
   avg_performance_score: number;
   is_top_performer: boolean;
@@ -110,7 +108,6 @@ export const GET = RouteHandler(async (req) => {
       goals: player_stats.goals,
       assists: player_stats.assists,
       shots: player_stats.shots,
-      minutes_played: player_stats.minutes_played,
     })
     .from(player_stats)
     .innerJoin(players, eq(player_stats.player_id, players.id))
@@ -139,7 +136,7 @@ export const GET = RouteHandler(async (req) => {
   // ─── Standarisasi fitur dan jalankan K-Means ──────────────────────────────
 
   const features: Feature[] = rows.map(
-    (r) => [r.goals, r.assists, r.shots, r.minutes_played] as Feature,
+    (r) => [r.goals, r.assists, r.shots] as Feature,
   );
 
   const { standardized, means, stds } = standardize(features);
@@ -190,7 +187,6 @@ export const GET = RouteHandler(async (req) => {
         goals: Number(denorm[0].toFixed(2)),
         assists: Number(denorm[1].toFixed(2)),
         shots: Number(denorm[2].toFixed(2)),
-        minutes_played: Number(denorm[3].toFixed(2)),
       },
       avg_performance_score:
         clusterSizes[i] === 0
@@ -220,7 +216,6 @@ export const GET = RouteHandler(async (req) => {
           goals: Number(c[0].toFixed(3)),
           assists: Number(c[1].toFixed(3)),
           shots: Number(c[2].toFixed(3)),
-          minutes_played: Number(c[3].toFixed(3)),
         })),
         centroids_original: step.centroids.map((c) => {
           const d = denormalize(c, stats);
@@ -228,14 +223,12 @@ export const GET = RouteHandler(async (req) => {
             goals: Number(d[0].toFixed(2)),
             assists: Number(d[1].toFixed(2)),
             shots: Number(d[2].toFixed(2)),
-            minutes_played: Number(d[3].toFixed(2)),
           };
         }),
         new_centroids_zscore: step.newCentroids.map((c) => ({
           goals: Number(c[0].toFixed(3)),
           assists: Number(c[1].toFixed(3)),
           shots: Number(c[2].toFixed(3)),
-          minutes_played: Number(c[3].toFixed(3)),
         })),
         assignments: newOrderIdx.map((origIdx) => step.assignments[origIdx]),
         changed_count: step.changedCount,
@@ -260,13 +253,11 @@ export const GET = RouteHandler(async (req) => {
       goals: Number(means[0].toFixed(2)),
       assists: Number(means[1].toFixed(2)),
       shots: Number(means[2].toFixed(2)),
-      minutes_played: Number(means[3].toFixed(2)),
     },
     feature_stds: {
       goals: Number(stds[0].toFixed(2)),
       assists: Number(stds[1].toFixed(2)),
       shots: Number(stds[2].toFixed(2)),
-      minutes_played: Number(stds[3].toFixed(2)),
     },
     clusters,
     top_cluster_id: topClusterIdx,

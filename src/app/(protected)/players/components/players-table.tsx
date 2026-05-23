@@ -128,10 +128,10 @@ export function PlayersTable({
       ),
     }),
     columnHelper.display({
-      id: "minutes",
-      header: () => <span className="text-xs">Menit</span>,
+      id: "shots",
+      header: () => <span className="text-xs">Tembakan</span>,
       cell: ({ row }) => (
-        <StatCell value={statsMap.get(row.original.id)?.minutes_played} />
+        <StatCell value={statsMap.get(row.original.id)?.shots} />
       ),
     }),
     ...(canWrite
