@@ -5,7 +5,7 @@ import { ApiResponse } from "@/app/api/utils/api-response";
 import { requireAuth, requireRole } from "@/app/api/utils/auth";
 import { RouteHandler } from "@/app/api/utils/route-handler";
 import { nowIsoString, orm } from "@/db/postgres";
-import { players } from "@/db/schema";
+import { player_club_history, player_stats, players } from "@/db/schema";
 
 const paramsSchema = z.object({
   id: z.uuid("Format id player tidak valid"),
@@ -146,8 +146,24 @@ export const DELETE = RouteHandler(async (req, ctx) => {
   requireRole(user, ["admin"]);
   const playerId = await parsePlayerId(ctx.params);
 
-  const result = await orm.delete(players).where(eq(players.id, playerId));
-  if ((result.rowCount ?? 0) < 1) {
+  const deleted = await orm.transaction(async (tx) => {
+    // Hapus statistik pemain lebih dulu; player_stats_history ikut terhapus
+    // otomatis via ON DELETE CASCADE pada player_stats_id.
+    await tx.delete(player_stats).where(eq(player_stats.player_id, playerId));
+
+    // Hapus penugasan pemain (player_club_history) yang mereferensikan pemain.
+    await tx
+      .delete(player_club_history)
+      .where(eq(player_club_history.player_id, playerId));
+
+    const result = await tx
+      .delete(players)
+      .where(eq(players.id, playerId));
+
+    return (result.rowCount ?? 0) >= 1;
+  });
+
+  if (!deleted) {
     throw ApiError.notFound("Pemain tidak ditemukan");
   }
 
