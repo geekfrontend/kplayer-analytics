@@ -26,6 +26,7 @@ import {
   type FeatureValues,
   FEATURE_LABELS,
   getClusterColor,
+  getPerformanceLevelLabels,
 } from "../services/analytics";
 
 type AxisFeature = keyof FeatureValues;
@@ -43,6 +44,7 @@ type ScatterPoint = {
   name: string;
   position: string;
   performance: number;
+  cluster?: number;
   isCentroid?: boolean;
 };
 
@@ -53,6 +55,8 @@ export function ClusterScatter({
 }: ClusterScatterProps) {
   const [xAxis, setXAxis] = useState<AxisFeature>("goals");
   const [yAxis, setYAxis] = useState<AxisFeature>("assists");
+
+  const performanceLabels = getPerformanceLevelLabels(clusters);
 
   // Group points by cluster
   const pointsByCluster = clusters.map((c) => {
@@ -65,6 +69,7 @@ export function ClusterScatter({
         name: p.player_name,
         position: p.position,
         performance: p.performance_score,
+        cluster: p.cluster,
       }));
     return { cluster: c.cluster, size: c.size, points };
   });
@@ -175,6 +180,11 @@ export function ClusterScatter({
                         Posisi: {data.position}
                       </p>
                     ) : null}
+                    {!data.isCentroid && data.cluster !== undefined ? (
+                      <p className="text-muted-foreground">
+                        {performanceLabels[data.cluster]}
+                      </p>
+                    ) : null}
                     <p className="font-mono tabular-nums">
                       {FEATURE_LABELS[xAxis]}: {data.x.toFixed(1)}
                     </p>
@@ -199,7 +209,7 @@ export function ClusterScatter({
             {pointsByCluster.map((g) => (
               <Scatter
                 key={`pts-${g.cluster}`}
-                name={`Cluster ${g.cluster + 1}${
+                name={`Cluster ${g.cluster + 1} — ${performanceLabels[g.cluster]}${
                   g.cluster === topClusterId ? " (top)" : ""
                 }`}
                 data={g.points}

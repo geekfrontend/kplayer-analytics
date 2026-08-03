@@ -15,6 +15,7 @@ import {
   type ClusterSummary,
   FEATURE_LABELS,
   getClusterColor,
+  getPerformanceLevelLabels,
   type KMeansStepDTO,
 } from "../services/analytics";
 import { CentroidDeltaTable } from "./centroid-delta-table";
@@ -59,6 +60,8 @@ export function IterationStepper({
 
   const currentStep = steps[stepIdx];
   const previousStep = stepIdx > 0 ? steps[stepIdx - 1] : null;
+
+  const performanceLabels = getPerformanceLevelLabels(clusters);
 
   const isInit = currentStep?.iteration === 0;
   const isConverged = currentStep?.converged === true;
@@ -241,6 +244,9 @@ export function IterationStepper({
                 >
                   {i + 1}
                 </span>
+                <span className="w-28 shrink-0 truncate text-xs text-muted-foreground">
+                  {performanceLabels[i]}
+                </span>
                 <div className="flex-1">
                   <div className="h-3 overflow-hidden rounded-full bg-muted">
                     <div
@@ -259,13 +265,18 @@ export function IterationStepper({
       </div>
 
       {/* Centroid delta table */}
-      <CentroidDeltaTable currentStep={currentStep} previousStep={previousStep} />
+      <CentroidDeltaTable
+        currentStep={currentStep}
+        previousStep={previousStep}
+        performanceLabels={performanceLabels}
+      />
 
       {/* Assignment matrix */}
       <AssignmentMatrix
         players={players}
         currentStep={currentStep}
         previousStep={previousStep}
+        performanceLabels={performanceLabels}
       />
 
       <div className="rounded-(--radius-md) border border-border bg-muted/20 p-3 text-xs text-muted-foreground">

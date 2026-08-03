@@ -127,3 +127,49 @@ export const FEATURE_LABELS: Record<keyof FeatureValues, string> = {
   assists: "Assist",
   shots: "Tembakan",
 };
+
+/**
+ * Label performa relatif per cluster — "Performa Tinggi", "Performa Sedang",
+ * "Performa Rendah", dst. Dihitung berdasarkan RANKING `avg_performance_score`
+ * (bukan index cluster), karena urutan cluster dari K-Means bersifat arbitrer.
+ *
+ * Skema pembagian level proporsional terhadap jumlah cluster (k), sehingga tetap
+ * masuk akal untuk k selain 3:
+ * - k <= 2  → Tinggi, Rendah
+ * - k == 3  → Tinggi, Sedang, Rendah
+ * - k > 3   → Tinggi, Sedang (beberapa level tengah), Rendah — dibagi rata
+ *   menjadi 3 kelompok (atas/tengah/bawah) berdasarkan posisi ranking.
+ */
+export function getPerformanceLevelLabels(
+  clusters: Pick<ClusterSummary, "cluster" | "avg_performance_score">[],
+): Record<number, string> {
+  const k = clusters.length;
+  if (k === 0) return {};
+
+  const ranked = [...clusters].sort(
+    (a, b) => b.avg_performance_score - a.avg_performance_score,
+  );
+
+  const labelForRank = (rank: number): string => {
+    if (k === 1) return "Performa Tinggi";
+    if (k === 2) return rank === 0 ? "Performa Tinggi" : "Performa Rendah";
+    if (k === 3) {
+      return rank === 0
+        ? "Performa Tinggi"
+        : rank === 1
+        ? "Performa Sedang"
+        : "Performa Rendah";
+    }
+    // k > 3: bagi jadi 3 kelompok proporsional (atas / tengah / bawah)
+    const third = k / 3;
+    if (rank < third) return "Performa Tinggi";
+    if (rank < third * 2) return "Performa Sedang";
+    return "Performa Rendah";
+  };
+
+  const result: Record<number, string> = {};
+  ranked.forEach((c, rank) => {
+    result[c.cluster] = labelForRank(rank);
+  });
+  return result;
+}

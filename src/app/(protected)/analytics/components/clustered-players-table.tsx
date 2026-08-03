@@ -20,21 +20,24 @@ import {
 } from "@/components/ui/table";
 import {
   type ClusteredPlayer,
+  type ClusterSummary,
   getClusterColor,
+  getPerformanceLevelLabels,
 } from "../services/analytics";
 
 type ClusteredPlayersTableProps = {
   players: ClusteredPlayer[];
+  clusters: ClusterSummary[];
   topClusterId: number;
-  totalClusters: number;
 };
 
 export function ClusteredPlayersTable({
   players,
+  clusters,
   topClusterId,
-  totalClusters,
 }: ClusteredPlayersTableProps) {
   const [filterCluster, setFilterCluster] = useState<string>("all");
+  const performanceLabels = getPerformanceLevelLabels(clusters);
 
   const filtered =
     filterCluster === "all"
@@ -63,16 +66,16 @@ export function ClusteredPlayersTable({
           <Select value={filterCluster} onValueChange={setFilterCluster}>
             <SelectTrigger
               id="filter-cluster"
-              className="h-8 min-w-36 text-xs"
+              className="h-8 min-w-44 text-xs"
             >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua cluster</SelectItem>
               <SelectItem value="top">Top performer saja</SelectItem>
-              {Array.from({ length: totalClusters }, (_, i) => i).map((i) => (
-                <SelectItem key={i} value={String(i)}>
-                  Cluster {i + 1}
+              {clusters.map((c) => (
+                <SelectItem key={c.cluster} value={String(c.cluster)}>
+                  Cluster {c.cluster + 1} — {performanceLabels[c.cluster]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -113,7 +116,7 @@ export function ClusteredPlayersTable({
                     <TableCell>
                       <span
                         className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold ${color.bg} ${color.text}`}
-                        title={`Cluster ${p.cluster + 1}`}
+                        title={`Cluster ${p.cluster + 1} — ${performanceLabels[p.cluster]}`}
                       >
                         {p.cluster + 1}
                       </span>

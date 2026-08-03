@@ -268,8 +268,8 @@ export default function AnalyticsPage() {
                 <TabsContent value="players" className="space-y-3">
                   <ClusteredPlayersTable
                     players={result.players}
+                    clusters={result.clusters}
                     topClusterId={result.top_cluster_id}
-                    totalClusters={result.k_used}
                   />
                 </TabsContent>
 

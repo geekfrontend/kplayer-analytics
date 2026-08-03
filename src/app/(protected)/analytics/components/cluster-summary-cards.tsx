@@ -6,6 +6,7 @@ import {
   type ClusterSummary,
   FEATURE_LABELS,
   getClusterColor,
+  getPerformanceLevelLabels,
 } from "../services/analytics";
 
 type ClusterSummaryCardsProps = {
@@ -18,6 +19,8 @@ export function ClusterSummaryCards({
   topClusterId,
 }: ClusterSummaryCardsProps) {
   if (clusters.length === 0) return null;
+
+  const performanceLabels = getPerformanceLevelLabels(clusters);
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -43,6 +46,9 @@ export function ClusterSummaryCards({
                   <div>
                     <p className="text-sm font-semibold text-foreground">
                       Cluster {c.cluster + 1}
+                    </p>
+                    <p className="text-xs font-medium text-primary">
+                      {performanceLabels[c.cluster]}
                     </p>
                     <p className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Users className="h-3 w-3" />

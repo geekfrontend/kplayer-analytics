@@ -19,6 +19,7 @@ import {
 type CentroidDeltaTableProps = {
   currentStep: KMeansStepDTO;
   previousStep: KMeansStepDTO | null;
+  performanceLabels: Record<number, string>;
 };
 
 const FEATURE_KEYS: (keyof FeatureValues)[] = [
@@ -61,6 +62,7 @@ function DeltaCell({ delta }: { delta: number }) {
 export function CentroidDeltaTable({
   currentStep,
   previousStep,
+  performanceLabels,
 }: CentroidDeltaTableProps) {
   const centroidsOriginal = currentStep.centroids_original;
   const centroidsZ = currentStep.centroids_zscore;
@@ -101,9 +103,13 @@ export function CentroidDeltaTable({
                   <TableCell>
                     <span
                       className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold ${color.bg} ${color.text}`}
+                      title={performanceLabels[i]}
                     >
                       {i + 1}
                     </span>
+                    <p className="mt-0.5 text-[9px] text-muted-foreground">
+                      {performanceLabels[i]}
+                    </p>
                   </TableCell>
                   {FEATURE_KEYS.map((key) => {
                     const original = centroid[key];
