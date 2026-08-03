@@ -13,6 +13,7 @@ type AssignmentMatrixProps = {
   players: ClusteredPlayer[];
   currentStep: KMeansStepDTO;
   previousStep: KMeansStepDTO | null;
+  performanceLabels: Record<number, string>;
 };
 
 /**
@@ -41,6 +42,7 @@ export function AssignmentMatrix({
   players,
   currentStep,
   previousStep,
+  performanceLabels,
 }: AssignmentMatrixProps) {
   const [search, setSearch] = useState("");
 
@@ -134,6 +136,11 @@ export function AssignmentMatrix({
                     <>
                       <span
                         className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold ${prevColor.bg} ${prevColor.text} opacity-50`}
+                        title={
+                          prevCluster !== null
+                            ? performanceLabels[prevCluster]
+                            : undefined
+                        }
                       >
                         {prevCluster! + 1}
                       </span>
@@ -142,6 +149,7 @@ export function AssignmentMatrix({
                   ) : null}
                   <span
                     className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold ${currentColor.bg} ${currentColor.text}`}
+                    title={performanceLabels[currentCluster]}
                   >
                     {currentCluster + 1}
                   </span>
